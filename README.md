@@ -126,7 +126,7 @@ Roles :
    - kills command if not updating feedback file within the timeout 
    - update the running task db about process state, duration and timer status
 
-Usage : launch.py --dbpath <path> --taskid <taskid> `--command '<process or script with all its options>'
+Usage : launch.py --dbpath <path> --taskid <taskid> --command '<process or script with all its options>'
 
 Parameters :
 --dbpath   <path>         : path where sqlite db file is located
@@ -200,7 +200,7 @@ Database file name is 'sqlite.db'
   --------------------------------------------------------------------------------------------------------------------------------------------
 
   Note : 
-    #0 : should be automatic (use 'null' during insert)
+    #0 : should be automatic (use null during insert)
     #1 : taskid should be uniq, for instance, use a random string generator
     #2 : RUNNING|SILENT|STALLED
     #3 : 0 if no feedback provided ; 1 if feedback provided
