@@ -46,8 +46,9 @@ The suggestion is to add to programs launched with taskwatcher a command line op
 - Without taskwatcher :  
 	`checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun`
 - With taskwatcher :  
-	`launcher.py --taskid 1 --name 'Runner' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --dbpath /fortipoc/taskwatch --timeout 30 --command 'checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun'`
+	`launch.py --taskid 1 --name 'Runner' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --dbpath /fortipoc/taskwatch --timeout 30 -- checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun`
 
+	Note : the command to run is located after the --
 
 
 ##### Running task status
@@ -83,7 +84,7 @@ Any kind of usefull information could be delivered as long as :
 
 ###### Feedback file processing
 
-- launcher.py does not parse feedback file. It only checks the file update from the file update time for the task timeout fonction.
+- launch.py does not parse feedback file. It only checks the file update from the file update time for the task timeout fonction.
 - control.py processed feedback file to provide output.  
   The last read value for a keyword updates any precedent values.  
 
@@ -222,9 +223,10 @@ Database file name is 'sqlite.db'
   | INTEGER PRIMARY KEY |    TEXT      |   TEXT   |  TEXT(#1)  |  TEXT(#2) |  INTEGER(#4) | INTEGER(#4) | INTEGER  |  BLOB |
   --------------------------------------------------------------------------------------------------------------------------
 
-  Note :
-    #1: keeps track of the type of termination signal
-	#2: keeps track of the terminaison error message if any
+  Notes :
+  #1: keeps track of the type of termination signal
+  #2: keeps track of the terminaison error message if any
+
 ```
 
 
