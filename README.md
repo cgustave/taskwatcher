@@ -13,7 +13,9 @@ A **status** of the currently running tasks is available.
 Tasks are **monitored** by checking if pid is still in process list.
 Optionally, if feedback is provided by the launched program, program is expected to provide *heartbeat* by updating the feedback file.  
 
-An optional **task timeout** may terminated the task if no hearbeat was received during the allowed 'timeout' period. 
+An optional **task timeout** may terminated the task if no hearbeat was received during the allowed 'timeout' period.  
+
+Prior to any launch call to start a new task, a taskid (number) should have been reserved with a call control.py --reserve.
 
 
 ###### Limitations
@@ -40,15 +42,21 @@ A basic file-based sqlite database is used to store running tasks data and keep 
 #### Expectation from the launched command
 
 A command may be ran without specific requirement, however to benefit from additional features, the run command may provide feedback via a text file.  
+The suggestion is to add to programs launched with taskwatcher a command line option to generate the **feedback** file.  
+The feedback file is expected to be named based on the taskid : feedback_TASKID.log
+Example :  
 
-The suggestion is to add to programs launched with taskwatcher a command line option to generate the **feedback.log** file, example :  
-
-- Without taskwatcher :  
+- Call without taskwatcher :  
 	`checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun`
-- With taskwatcher :  
-	`launch.py --taskid 1 --name 'Runner' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --dbpath /fortipoc/taskwatch --timeout 30 -- checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun`
 
-	Note : the command to run is located after the --
+- Same call with taskwatcher :  
+	- Get a taskid : `control.py --reserve`  ==> Got 1
+	- Launch task using taskid 1 :  
+	`launch.py --taskid 1 --name 'Runner' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --db /fortipoc/taskwatch/sqlite.db --timeout 30 -- checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun --feedback feedback_1.log`
+
+	Notes : 
+	- the command to run is located after the --
+	- called program is informed with --feedback feedback_1.log that it should write a feedback file named feedback_1.log
 
 
 ##### Running task status
@@ -126,11 +134,16 @@ Roles :
    - monitor activity of the feedback file (by its update timing information)
    - kills command if not updating feedback file within the timeout 
    - update the running task db about process state, duration and timer status
+   - manage task termination : archive task on database, delete feedback file
 
-Usage : launch.py --dbpath <path> --taskid <taskid> --command '<process or script with all its options>'
+Pre-requisite :
+A unique taskid should have been reserved from a call to control.py to avoid duplicates.
+If no reservation was made, the task won't start
+
+Usage : launch.py --db <database> --taskid <taskid> --command '<process or script with all its options>'
 
 Parameters :
---dbpath   <path>         : path where sqlite db file is located
+--db       <database>     : sqlite database file
 --taskid   <taskid>       : task identifier (could be a number or a generated random string (8 chars max)    
 
 Optional parameters :  
@@ -148,13 +161,14 @@ Roles :
    - Provide history of terminated tasks
    - Provide all latests feedback information from the task
    - Manage history
-   - Kill tasks
+   - Kill task (and cleanup feedback file if necessary)
    - Initialise (or re-initialize db)
+   - Set a reservation for a task id
    
-Usage : control.py --dbpath <path> <command>
+Usage : control.py --db <database> <command>
 
 Options :
---dbpath <path>      : Path where db files is located
+--db <database>      : sqlite database file
 
 List of available commands :
 
@@ -162,6 +176,8 @@ List of available commands :
 
 --list               : Provides a table displaying the list of the currently running tasks with : 
                        [ taskid, name, pid, status, starttime, duration(s), feedback(yes/no), timer(s), timeout(s) ]
+
+--reserve            : Returns a unique taskid, reserved for future call of the launcher
 
 --feedback <taskid>  : Returns a json formatted output of the feedback values for the given task
                      : Only available if the command provides feedback (feedback=yes in list)
@@ -173,6 +189,9 @@ List of available commands :
 --killall <taskname> : Request to terminate all tasks named <taskname>
 
 ```
+
+#### typical usage
+
 
 #### sqlite database
 
@@ -187,45 +206,50 @@ An sqlite database is used for 3 purposes :
 - keep an history of the previously completed tasks  
   control.py called with --history
 
-Database file name is 'sqlite.db'
-
 
 **Table format**
 
 ```tex
 * Table tasks:
   Keeps track of running tasks status
-  --------------------------------------------------------------------------------------------------------------------------------------------
-  |       id(#0)        |  taskid(#1)  | taskname |    pid   |   status   |   feedback    |   startime   | duration |  lastupdate  | timeout |
-  | INTEGER PRIMARY KEY |    TEXT      |   TEXT   |  INTEGER |  TEXT(#2)  |  INTEGER(#3)  |  INTEGER(#4) | INTEGER  |  INTEGER(#4) | INTEGER |
-  --------------------------------------------------------------------------------------------------------------------------------------------
+  ------------------------------------------------------------------------------------------------------------------------------------------
+  |       id(#1)        |  name |    pid   |   status   |   feedback    |  reservetime |   starttime   | duration |  lastupdate  | timeout |
+  | INTEGER PRIMARY KEY |  TEXT |  INTEGER |  TEXT(#2)  |  INTEGER(#3)  |  INTEGER(#4) |   INTEGER(#4) | INTEGER  |  INTEGER(#4) | INTEGER |
+  ------------------------------------------------------------------------------------------------------------------------------------------
 
   Note : 
-    #0 : should be automatic (use null during insert)
-    #1 : taskid should be uniq, for instance, use a random string generator
-    #2 : RUNNING|SILENT|STALLED
+    #1 : should be automatic (use null during insert)
+    #2 : RESERVED|RUNNING|SILENT|STALLED
     #3 : 0 if no feedback provided ; 1 if feedback provided
-    #4 : unix format (seconds since ...)
+    #4 : unix date format
 
+  taskid reservation consists of inserting a new task with all field empty, except status=RESERVED and reservetime set
 
-* Table feedback:
-  Keeps track of data feeback from the run command, stored as json key/value pairs
-  ------------------
-  |    id   | json |
-  | INTEGER | BLOB |
-  ------------------
+* Table feedbacks:
+  Keeps track of data feebacks from the run command, stored as json key/value pairs
+  ---------------------------------------
+  |    id   | feedback  |   lastupdate  |
+  | INTEGER |  BLOB(#1) |   INTEGER(#2) |
+  ---------------------------------------
+
+  Note :
+  #1 : json format expected
+  #2 : unix date format
+
 
 * Table history:
   Keeps track of the completed tasks
   Final state of json feedback is stored (this allows to store json reports before the command terminates)
-  --------------------------------------------------------------------------------------------------------------------------
-  |       id(#0)        |  taskid(#1)  | taskname | termsignal | termerror |   startime   |   endtime   | duration |  json | 
-  | INTEGER PRIMARY KEY |    TEXT      |   TEXT   |  TEXT(#1)  |  TEXT(#2) |  INTEGER(#4) | INTEGER(#4) | INTEGER  |  BLOB |
-  --------------------------------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------------------------------
+  |       id(#0)        |  taskid(#1)  | taskname | termsignal | termerror |   starttime   |   endtime   | duration | feedback  | 
+  | INTEGER PRIMARY KEY |   INTEGER    |   TEXT   |  TEXT(#1)  |  TEXT(#2) |   INTEGER(#3) | INTEGER(#3) | INTEGER  |  BLOB(#4) |
+  -------------------------------------------------------------------------------------------------------------------------------
 
   Notes :
-  #1: keeps track of the type of termination signal
-  #2: keeps track of the terminaison error message if any
+  #1 : keeps track of the type of termination signal
+  #2 : keeps track of the terminaison error message if any
+  #3 : unix date format
+  #4 : json format expected
 
 ```
 

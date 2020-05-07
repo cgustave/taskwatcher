@@ -11,20 +11,14 @@ import logging as log
 import os
 import argparse
 
-class Launcher(object):
+class Launch(object):
     """
     Launcher from taskwatcher suite
-    Called with :
-        - taskid
-        - dbpath
-
-    Optional :
-        - name
-        - feedpath
-        - timeout
+    Called with taskid, db
+    Optional : name, feedpath, timeout
+    Requirement : a taskid should have been reserved
     """
-
-    def __init__(self, taskid='', dbpath='', name='', feedpath=None, timeout=30, debug=False):
+    def __init__(self, taskid='', db='', name='', feedpath=None, timeout=30, debug=False):
 
         # create logger
         log.basicConfig(
@@ -43,8 +37,8 @@ class Launcher(object):
             log.basicConfig(level='ERROR')
 
         # Sanity checks
-        if not (os.path.exists(dbpath) and os.path.isdir(dbpath)):
-            print ("dbpath {} does not exist or is not a directory\n".format(dbpath))
+        if not (os.path.isfile(db)):
+            print ("db file {} does not exist\n".format(db))
             raise SystemExit
 
         if feedpath:
@@ -52,12 +46,12 @@ class Launcher(object):
                print ("feedpath does not exist or is not a directory\n")
                raise SystemExit
 
-        log.info("Constructor with taskid={} dbpath={}  name={} feedpath={} timeout={} debug={}".
-          format(taskid, dbpath, name, feedpath, timeout, debug))
+        log.info("Constructor with taskid={} db={}  name={} feedpath={} timeout={} debug={}".
+          format(taskid, db, name, feedpath, timeout, debug))
  
         # Attributes
         self.taskid = taskid
-        self.dbpath = dbpath
+        self.db = db
         self.name = name 
         self.feedpath = feedpath
         self.timeout = timeout
@@ -65,10 +59,10 @@ class Launcher(object):
 if __name__ == '__main__': #pragma: no cover
 
     parser = argparse.ArgumentParser(description='Launch program as a task.')
-    parser.add_argument('--taskid', help="Task identifier")
-    parser.add_argument('--name',  help="Task name")
-    parser.add_argument('--dbpath', help="Path where sqlite db file is located")
-    parser.add_argument('--feedpath', help="Path where feedback file is located")
+    parser.add_argument('--taskid', help="reserved task identifier", required=True)
+    parser.add_argument('--name', help="Task name")
+    parser.add_argument('--db', help="sqlite db file", required=True)
+    parser.add_argument('--feedpath', help="Path where feedback file is expected")
     parser.add_argument('--debug', '-d', help="Debugging on", action="store_true")
 
     # Get our command args, after the --
@@ -95,5 +89,7 @@ if __name__ == '__main__': #pragma: no cover
     else:
         name=args.name
 
-    launcher=Launcher(taskid=args.taskid, name=name, dbpath=args.dbpath,
-                      feedpath=args.feedpath, debug=args.debug)
+    launcher=Launch(taskid=args.taskid, name=name, db=args.db,
+                    feedpath=args.feedpath, debug=args.debug)
+
+
