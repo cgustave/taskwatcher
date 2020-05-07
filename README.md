@@ -174,6 +174,8 @@ List of available commands :
 
 --initialize         : Create or recreates a task database (all info is lost)
 
+--update             : Update database time informations (task duration)
+
 --list               : Provides a table displaying the list of the currently running tasks with : 
                        [ taskid, name, pid, status, starttime, duration(s), feedback(yes/no), timer(s), timeout(s) ]
 

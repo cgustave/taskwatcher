@@ -37,6 +37,9 @@ CLASSES
      |  return_tasks(self)
      |      Returns a dictionary listing the current tasks
      |  
+     |  update(self)
+     |      Update database timing information like tasks duration
+     |  
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
      |  

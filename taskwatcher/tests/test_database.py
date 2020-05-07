@@ -7,6 +7,7 @@ Created on May 6, 2020
 import logging as log
 import unittest
 import json
+import time
 from database import Database
 
 # create logger
@@ -32,7 +33,7 @@ class DatabaseTestCase(unittest.TestCase):
     # Reserve task
     def test_reserve(self):
         self.db.reserve_task()
-        self.assertTrue(self.db.task_is_reserved(taskid='1'))
+        self.assertTrue(self.db.is_task_reserved(taskid='1'))
 
     # Update task
     def test_update_task(self):
@@ -40,9 +41,31 @@ class DatabaseTestCase(unittest.TestCase):
         update['name'] = "MyTestTask"
         update['pid'] = 120
         update['status'] = "RUNNING"
+        update['starttime'] = int(time.time())
         self.db.update_task(taskid='1', update=update)
         js = json.loads(self.db.return_tasks(taskid='1'))
         self.assertEqual(js['1']['status'], 'RUNNING')
+
+    # Database update
+
+    def force_task_started(self, taskid='1'):
+        # Force some tasks to be started (in timeout state)
+        update = {}
+        update['name'] = "MyTestTask"
+        update['pid'] = 120
+        update['status'] = "RUNNING"
+        update['starttime'] = int(time.time()-100)
+        update['timeout'] = 30
+        self.db.update_task(taskid=taskid, update=update)
+
+    def test_update(self):
+        self.force_task_started(taskid='1')
+        self.db.update()
+
+    def test_timeout_status(self):
+        self.force_task_started(taskid='1')
+        status = self.db.timeout_status(taskid='1')
+        self.assertTrue(status)
 
     # Update feedback
     def test_update_feedback_insert(self):
@@ -58,6 +81,25 @@ class DatabaseTestCase(unittest.TestCase):
         self.db.update_feedback(taskid='1', feedback=feedback)
         js = json.loads(self.db.return_feedbacks(taskid='1'))
         self.assertEqual(js['1']['feedback'], feedback)
+
+    # history
+
+    def add_history(self):
+        entry = {}
+        entry['taskid'] = 100
+        entry['taskname'] = 'MyTestTask'
+        entry['termsignal'] = 'SIGTERM'
+        entry['termerror'] = ''
+        entry['starttime'] = 1588874292
+        entry['endtime'] = 1588875292
+        entry['duration'] = 1000
+        entry['feedback'] = "{ 'person' : 'john', 'animal' : { 'name' : 'Lune', 'color' : 'black', 'gender' : 'female'} }"
+        self.db.add_history(entry=entry)
+
+    def test_return_history(self):
+        self.add_history()
+        js = json.loads(self.db.return_history())
+        self.assertEqual(js['1']['taskname'],"MyTestTask")
 
 if __name__ == '__main__':
     unittest.main()

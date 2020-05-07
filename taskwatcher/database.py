@@ -91,6 +91,56 @@ class Database(object):
 
     # --- tasks ---
 
+    def update(self, taskid=None):
+        """
+        Update database information
+        This command should be call on a regular basis to update duration information
+
+        If a taskid is provided, only the specific task is updated
+        In this case only, a True/False is return to tell if the task has
+        timed-out
+        """
+        log.info("Enter")
+
+        tasks = json.loads(self.return_tasks(taskid=taskid))
+        updatetime = int(time.time())
+        duration = None
+
+        for t in tasks:
+            starttime = tasks[t]['starttime']
+            timeout = tasks[t]['timeout']
+            if starttime:
+                duration = updatetime - starttime
+                log.debug("Duration update needed for taskid={} startime={} now={} duration={} timeout={}".
+                          format(taskid, starttime, updatetime, duration, timeout))
+                update = {}
+                update['duration'] = duration
+                # Do not change the lastupdate here
+                self.update_task(taskid=t, update=update, do_lastupdate=False)
+
+        if taskid and timeout and starttime and duration:
+            has_timeout = False
+            if duration > timeout:
+                log.debug("Task has timed-out duration={} timeout={}".format(duration, timeout))
+                has_timeout = True
+            return has_timeout
+    
+
+    def timeout_status (self, taskid):
+        """
+        Inform if the task has reached timeout if it was not updated since the
+        maximum allowed timeout value
+        """
+        log.info("Enter with taskid={}".format(taskid))
+
+        if not taskid:
+            log.error("taskid is required")
+            raise SystemExit
+        
+        status  = self.update(taskid=taskid)
+        return status
+
+
     def reserve_task(self):
         """
         Inserts a new task for a reservation
@@ -121,7 +171,7 @@ class Database(object):
         return lastid
 
 
-    def task_is_reserved(self, taskid=''):
+    def is_task_reserved(self, taskid=''):
         """
         Test if the provided task id has been reserved
         Parameter : taskid
@@ -145,12 +195,17 @@ class Database(object):
         finally:
             self._DB.close()
 
-    def update_task(self, taskid='', update=None):
+
+    def update_task(self, taskid='', update=None, do_lastupdate=True):
         """
         Updates a task from its taskid with the given information in the update dictionary
         Updates the lastupdate timer
+
+        Per default (do_lastupdate=True) the 'lastupdate' is updated.
+        Use do_lastupdate=False to keep it untouched
         """
-        log.info("Enter")
+        log.info("Enter with taskid={} update={} do_lastupdate={}".
+                format(taskid, update, do_lastupdate))
 
         if not taskid:
             log.error("no taskid provided")
@@ -173,7 +228,10 @@ class Database(object):
 
         log.debug("updating with task={}".format(task[taskid]))
 
-        updatetime = int(time.time())
+        if do_lastupdate:
+            updatetime = int(time.time())
+        else:
+            updatetime = task[taskid]['lastupdate']
 
         try:
             self._DB = sqlite3.connect(self.db)
@@ -246,7 +304,6 @@ class Database(object):
         log.debug("return result_json={}".format(result_json))
         
         return result_json
-
 
     # --- feedbacks ---
 
@@ -349,3 +406,75 @@ class Database(object):
             finally:
                  self._DB.close()
 
+
+    # --- history
+    
+    def add_history(self, entry):
+        """
+        Adds a new entry in the history
+        entry is a dictionary
+        """
+        log.info("Enter")
+        try:
+            self._DB = sqlite3.connect(self.db)
+            cursor = self._DB.cursor()
+            cursor.execute('''INSERT INTO history
+                           (taskid,taskname,termsignal,termerror,starttime,endtime,duration,feedback)
+                           VALUES(?,?,?,?,?,?,?,?)''',
+                           (    entry['taskid'], 
+                                entry['taskname'],
+                                entry['termsignal'],
+                                entry['termerror'],
+                                entry['starttime'],
+                                entry['endtime'],
+                                entry['duration'],
+                                entry['feedback'],
+                           ))
+            lastid = cursor.lastrowid
+            log.debug("lastid={}".format(lastid))
+            self._DB.commit()
+
+        except Exception as e:
+            # Roll back
+            self._DB.rollback()
+            raise e
+
+        finally:
+             self._DB.close()
+
+
+    def return_history(self):
+        """
+        Return all historical tasks in a json format
+        """
+        log.info("Enter")
+        result={}
+
+        try:
+            self._DB = sqlite3.connect(self.db)
+            cursor = self._DB.cursor()
+            cursor.execute('''SELECT id, taskid, taskname, termsignal,
+                           termerror, starttime, endtime, duration, feedback
+                           FROM history''')
+            for row in cursor:
+                result[row[0]]= {}
+                result[row[0]]['taskid'] = row[1]
+                result[row[0]]['taskname'] = row[2]
+                result[row[0]]['termsignal'] = row[3]
+                result[row[0]]['termerror'] = row[4]
+                result[row[0]]['startime'] = row[5]
+                result[row[0]]['endtime'] = row[6]
+                result[row[0]]['duration'] = row[7]
+                result[row[0]]['feedback'] = row[8]
+
+        except Exception as e:
+            self._DB.rollback()
+            raise e
+
+        finally:
+            self._DB.close()
+
+        result_json = json.dumps(result)
+        log.debug("return result_json={}".format(result_json))
+
+        return result_json

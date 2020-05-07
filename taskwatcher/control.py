@@ -53,6 +53,13 @@ class Control(object):
         self._DB.create()
 
 
+    def update(self):
+        """
+        Update database timing information like tasks duration
+        """
+        log.info("Enter")
+        self._DB.update()
+
     def reserve(self):
         """
         Reserve a free taskid and return it
@@ -105,7 +112,8 @@ if __name__ == '__main__': #pragma: no cover
     parser.add_argument('--debug', '-d', help="turn on debug", action="store_true")
     parser.add_argument('--human', help="human readable output", action="store_true")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--initialize', help="create or recreates a task database (all info are lost)", action="store_true")
+    group.add_argument('--initialize', help="creates or recreates a task database (all info are lost)", action="store_true")
+    group.add_argument('--update', help="updates database timing information (taks durations)",  action="store_true")
     group.add_argument('--list', help="list active tasks", action="store_true")
     group.add_argument('--reserve', help="get a reservation for a taskid number", action="store_true")
     group.add_argument('--feedback', metavar='taskid',help="returns a json formatted feedback for the given taskid")
@@ -123,6 +131,9 @@ if __name__ == '__main__': #pragma: no cover
 
     elif args.initialize:
         controller.initialize()
+
+    elif args.update:
+        controller.update()
 
     elif args.list:
         if args.human:
