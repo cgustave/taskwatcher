@@ -1,44 +1,33 @@
-Help on module control:
+Help on module launch:
 
 NAME
-    control
+    launch
 
 DESCRIPTION
-    Created on May 7th, 2020
+    Created on May 6th, 2020
     @author: cgustave
     
-    controller from the taskwatcher suite
+    launcher from the taskwatcher suite
 
 CLASSES
     builtins.object
-        Control
+        Launch
     
-    class Control(builtins.object)
-     |  Control(db='', debug=False)
+    class Launch(builtins.object)
+     |  Launch(taskid='', db='', name='', feedpath=None, timeout=30, debug=False)
      |  
-     |  Controller from the taskwatcher suite
-     |  Called with db
+     |  Launcher from taskwatcher suite
+     |  Called with taskid, db
+     |  Optional : name, feedpath, timeout
+     |  Requirement : a taskid should have been reserved
      |  
      |  Methods defined here:
      |  
-     |  __init__(self, db='', debug=False)
+     |  __init__(self, taskid='', db='', name='', feedpath=None, timeout=30, debug=False)
      |      Initialize self.  See help(type(self)) for accurate signature.
      |  
-     |  initialize(self)
-     |      Initializes a database
-     |  
-     |  print_tasks(self)
-     |      Prints a human formatted listing of the current tasks
-     |  
-     |  reserve(self)
-     |      Reserve a free taskid and return it
-     |      Should be called before a task can be created
-     |  
-     |  return_tasks(self)
-     |      Returns a dictionary listing the current tasks
-     |  
-     |  update(self)
-     |      Update database timing information like tasks duration
+     |  execute(self, command='')
+     |      Execute provided command in a child process
      |  
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
@@ -50,6 +39,6 @@ CLASSES
      |      list of weak references to the object (if defined)
 
 FILE
-    /home/cgustave/github/python/packages/taskwatcher/taskwatcher/control.py
+    /home/cgustave/github/python/packages/taskwatcher/taskwatcher/launch.py
 
 

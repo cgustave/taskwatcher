@@ -107,38 +107,64 @@ class Control(object):
                  
 if __name__ == '__main__': #pragma: no cover
 
-    parser = argparse.ArgumentParser(description='Task controller.')
-    parser.add_argument('--db', help="sqlite database file", required=True)
+    parser = argparse.ArgumentParser(description='Task controller')
+    parser.set_defaults(func='none')
     parser.add_argument('--debug', '-d', help="turn on debug", action="store_true")
-    parser.add_argument('--human', help="human readable output", action="store_true")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--initialize', help="creates or recreates a task database (all info are lost)", action="store_true")
-    group.add_argument('--update', help="updates database timing information (taks durations)",  action="store_true")
-    group.add_argument('--list', help="list active tasks", action="store_true")
-    group.add_argument('--reserve', help="get a reservation for a taskid number", action="store_true")
-    group.add_argument('--feedback', metavar='taskid',help="returns a json formatted feedback for the given taskid")
-    group.add_argument('--history', help="dump all historical tasks completed", action="store_true")
-    group.add_argument('--clear', help="clear all tasks history", action="store_true")
-    group.add_argument('--kill', metavar='taskid', help="kills the task from its taskid")
-    group.add_argument('--killall', metavar='taskname',help="kills all task with the given taskname")
-    args = parser.parse_args()
+    parser.add_argument('--db', help="sqlite file (default sqlite.sb)", default='sqlite.db')
+    subparsers = parser.add_subparsers(help='sub-command help')
 
+    # tasks
+    parser_task = subparsers.add_parser('task', help='active tasks')
+    parser_task.set_defaults(func='task')
+    parser_task.add_argument('--list', help='list tasks', action="store_true")
+    parser_task.add_argument('--reserve', help="reserve a taskid", action="store_true")
+    parser_task.add_argument('--feedback', metavar='taskid', help="returns feedback")
+    parser_task.add_argument('--kill', metavar='taskid', help="kill task from its taskid")
+    parser_task.add_argument('--killall', metavar='taskname', help="kill all tasks by name")
+    parser_task.add_argument('--human', help="human readable output", action="store_true")
+   
+
+    # history
+    parser_history = subparsers.add_parser('history', help='compeleted tasks')
+    parser_history.set_defaults(func='history')
+    parser_history.add_argument('--list', help="display all completed tasks", action="store_true")
+    parser_history.add_argument('--clear', help="clear history", action="store_true")
+
+    # database
+    parser_db =  subparsers.add_parser('database', help='database maintenance')
+    parser_db.set_defaults(func='database')
+    parser_db.add_argument('--initialize', help="creates or recreates a task database (all info are lost)", action="store_true")
+    parser_db.add_argument('--update', help="updates database timing information (taks durations)",  action="store_true")
+
+
+    args = parser.parse_args()
+    #print("args={}".format(args))
     controller=Control(db=args.db,debug=args.debug)
 
-    if args.reserve:
-        taskid = controller.reserve()
-        print("Taskid {} has been reserved".format(taskid))
 
-    elif args.initialize:
-        controller.initialize()
 
-    elif args.update:
-        controller.update()
+    # tasks
+    if args.func == 'task':
+        if args.list:
 
-    elif args.list:
-        if args.human:
-            controller.print_tasks()
-        else:
-           print("{}".format(controller.return_tasks()))
+            if args.human:
+            	controller.print_tasks()
+            else:
+            	print("{}".format(controller.return_tasks()))
+        if args.reserve:
+            taskid = controller.reserve()
+            print("Taskid {} has been reserved".format(taskid))
 
+    # database
+    elif args.func == 'database':
+        if args.initialize:
+            controller.initialize()
+            
+        if args.update:
+            controller.update()
+
+    # history
+    elif args.func == 'history':
+        controller._DB.return_history()
+        
 

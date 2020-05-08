@@ -9,6 +9,7 @@ launcher from the taskwatcher suite
 
 import logging as log
 import os
+import sys
 import argparse
 
 class Launch(object):
@@ -55,6 +56,33 @@ class Launch(object):
         self.name = name 
         self.feedpath = feedpath
         self.timeout = timeout
+        self.command = None
+
+
+    def execute(self, command=""):
+        """
+        Execute provided command in a child process
+        """
+        log.info("Enter with command={}".format(command))
+
+        # Prepare command and args for exec
+        # args : starts with the command name
+        # Example or args for ./launch.py --taskid 1 --db sqlite.db  --  ls
+        # ./launch.py --taskid 1 --db sqlite.db -- tests/testprog.py --scenario sleeping
+        #  ==> cmd_list ['tests/testprog.py', '--scenario', 'sleeping']
+        
+        cmd_list = command.split()
+        log.debug("cmd_list {}".format(cmd_list))
+
+        try:
+            os.execvp(cmd_list[0], cmd_list)
+        except Exception as e:
+            log.debug("Error {}".format(e))
+            raise SystemExit
+
+        log.debug("End of program")
+        os._exit(0)
+
                  
 if __name__ == '__main__': #pragma: no cover
 
@@ -84,12 +112,13 @@ if __name__ == '__main__': #pragma: no cover
     print ("Command_line={}".format(command_line))
 
     # If no name is provided, use program name
-    if not args.name:
-        name=args.command[1]
-    else:
-        name=args.name
+    #if not args.name:
+    #    name=args.command[1]
+    #else:
 
-    launcher=Launch(taskid=args.taskid, name=name, db=args.db,
+    launcher=Launch(taskid=args.taskid, name=args.name, db=args.db,
                     feedpath=args.feedpath, debug=args.debug)
+
+    launcher.execute(command_line)
 
 
