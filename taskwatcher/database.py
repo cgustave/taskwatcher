@@ -182,7 +182,7 @@ class Database(object):
         try:
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
-            cursor.execute('''SELECT id, status FROM tasks WHERE status="RESERVED" and id=?''',taskid)  
+            cursor.execute('''SELECT id, status FROM tasks WHERE status="RESERVED" and id=?''', [taskid])  
             task = cursor.fetchone()
             if task:
                 return True
@@ -274,7 +274,7 @@ class Database(object):
             if taskid:
                 cursor.execute('''SELECT id, name, pid, status, feedback, reservetime, 
                                   starttime, duration, lastupdate, timeout FROM
-                                  tasks WHERE id=?''',taskid)
+                                  tasks WHERE id=?''', [taskid])
             else:
                 cursor.execute('''SELECT id, name, pid, status, feedback, reservetime, 
                                   starttime, duration, lastupdate, timeout FROM tasks''')
@@ -305,6 +305,32 @@ class Database(object):
         
         return result_json
 
+
+    def delete_task(self, taskid=None):
+        """
+        Delete a task from its taskid
+        """
+        log.info("Enter")
+
+        if not taskid:
+            log.error("taskid is required")
+            raise SystemExit
+ 
+        try:
+            self._DB = sqlite3.connect(self.db)
+            cursor = self._DB.cursor()
+            log.debug("deleting task taskid={}".format(taskid))
+            cursor.execute('''DELETE FROM tasks WHERE id=?''', [taskid])
+            self._DB.commit()
+
+        except Exception as e:
+            # Roll back
+            self._DB.rollback()
+            raise e
+
+        finally:
+             self._DB.close()
+
     # --- feedbacks ---
 
     def return_feedbacks(self, taskid=None):
@@ -319,7 +345,7 @@ class Database(object):
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
             if taskid:
-                cursor.execute('''SELECT id, feedback FROM feedbacks WHERE id=?''',taskid)
+                cursor.execute('''SELECT id, feedback FROM feedbacks WHERE id=?''', [taskid])
             else:
                 cursor.execute('''SELECT id, feedback FROM feedbacks''')
 
@@ -415,6 +441,8 @@ class Database(object):
         entry is a dictionary
         """
         log.info("Enter")
+
+        log.debug("add entry={}".format(entry))
         try:
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
@@ -462,7 +490,7 @@ class Database(object):
                 result[row[0]]['taskname'] = row[2]
                 result[row[0]]['termsignal'] = row[3]
                 result[row[0]]['termerror'] = row[4]
-                result[row[0]]['startime'] = row[5]
+                result[row[0]]['starttime'] = row[5]
                 result[row[0]]['endtime'] = row[6]
                 result[row[0]]['duration'] = row[7]
                 result[row[0]]['feedback'] = row[8]

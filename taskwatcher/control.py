@@ -75,9 +75,9 @@ class Control(object):
         Returns a dictionary listing the current tasks
         """
         log.info("Enter")
-        data = self._DB.return_tasks()
-        log.debug("data={}".format(data))
-        return data
+        task = self._DB.return_tasks()
+        log.debug("task={}".format(task))
+        return task
 
     def print_tasks(self):
         """
@@ -104,7 +104,45 @@ class Control(object):
                          str(tasklist[task]['timeout']),
                         ))
         print("----------------------------------------------------------------------------------------------------------------------------------------")
-                 
+
+
+    def return_history(self):
+        """
+        Returns history list in json format
+        """
+        log.info("Enter")
+        history = self._DB.return_history()
+        log.debug("history={}".format(history))
+        return history
+
+
+    def print_history(self):
+        """
+        Print a human formatted listing of history
+        """
+        log.info("Enter")
+        historylist =  json.loads(self.return_history())
+
+        print("----------------------------------------------------------------------------------------------------------------------------------------")
+        print("|    id    | task id  |      task name       | termsignal | termerror | starting time | ending time | duration |      feedback         |") 
+        print("----------------------------------------------------------------------------------------------------------------------------------------")
+
+        for task in historylist:
+            print("| {:>8} | {:>8} | {:20} | {:>10} | {:>9} | {:>13} | {:>11} | {:>8} | {:>21} |".format(
+                task,
+                str(historylist[task]['taskid']),
+                str(historylist[task]['taskname']),
+                str(historylist[task]['termsignal']),
+                str(historylist[task]['termerror']),
+                str(historylist[task]['starttime']),
+                str(historylist[task]['endtime']),
+                str(historylist[task]['duration']),
+                str(historylist[task]['feedback'])
+            ))
+
+        print("----------------------------------------------------------------------------------------------------------------------------------------")
+
+
 if __name__ == '__main__': #pragma: no cover
 
     parser = argparse.ArgumentParser(description='Task controller')
@@ -128,6 +166,7 @@ if __name__ == '__main__': #pragma: no cover
     parser_history = subparsers.add_parser('history', help='compeleted tasks')
     parser_history.set_defaults(func='history')
     parser_history.add_argument('--list', help="display all completed tasks", action="store_true")
+    parser_history.add_argument('--human', help="human readable output", action="store_true")
     parser_history.add_argument('--clear', help="clear history", action="store_true")
 
     # database
@@ -146,11 +185,10 @@ if __name__ == '__main__': #pragma: no cover
     # tasks
     if args.func == 'task':
         if args.list:
-
             if args.human:
             	controller.print_tasks()
             else:
-            	print("{}".format(controller.return_tasks()))
+            	print(controller.return_tasks())
         if args.reserve:
             taskid = controller.reserve()
             print("Taskid {} has been reserved".format(taskid))
@@ -165,6 +203,12 @@ if __name__ == '__main__': #pragma: no cover
 
     # history
     elif args.func == 'history':
-        controller._DB.return_history()
+        if args.list:
+            if args.human:
+                controller.print_history()
+            else:
+                print(controller.return_history())
+
+            controller._DB.return_history()
         
 

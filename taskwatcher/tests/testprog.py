@@ -3,6 +3,7 @@
 
 import argparse
 import time
+import sys
 import logging as log
 
 class Testprog(object):
@@ -46,18 +47,16 @@ class Testprog(object):
         log.info("Enter")
 
         if not self.scenario:
-            log.error("scenario required")
-            raise SystemExit
+            sys.exit("scenario required")
         elif self.scenario == "sleeping":
             self.sleeping()
         elif self.scenario == "feedbacking":
             self.feedbacking()
         else:
-            log.error("Unknown scenario {}".format(self.scenario))
-            raise SystemExit
+            sys.exit("Unknown scenario {}".format(self.scenario))
 
         log.debug("End of testprog scenario {}".format(self.scenario))
-        raise SystemExit
+        sys.exit()
 
 
     def sleeping(self):
@@ -90,12 +89,10 @@ class Testprog(object):
  
         # Sanity
         if not self.feedback:
-            log.error("feedback file expected")
-            raise SystemExit
+            sys.exit("--feedback required")
 
         if not self.textfile:
-            log.error("textfile required")
-            raise SystemExit
+            sys.exit("--textfile required")
 
         delay = 1
         if self.delay:
@@ -108,23 +105,24 @@ class Testprog(object):
             for line in fsrc:
                 self._FSRC.append(line)
             fsrc.close()
-
+            log.debug("file in memory")
         except:
-            log.debug("could not open textfile {}".format(self.texfile))
-            raise SystemExit
+            sys.exit("could not open textfile {}".format(self.texfile))
 
+            log.debug("open file {}".format(self.feedback))
         try:
             f = open(self.feedback,"w")
-            for line in self._FSRC:
-                log.debug("writing feedback line: {}".format(line))
-                f.write(line)
-                #f.write("\n")
-                f.flush()
-                time.sleep(delay)
-            f.close
         except:
-            log.debug("could not write feedback file {}".format(self.feedback))
-            raise SystemExit
+            sys.exit("could not write feedback file {}".format(self.feedback))
+
+        for line in self._FSRC:
+            log.debug("writing feedback line: {}".format(line))
+            f.write(line)
+            f.flush()
+            time.sleep(float(delay))
+
+        f.close
+        sys.exit()
 
 if __name__ == '__main__': #pragma: no cover
     parser = argparse.ArgumentParser(description='Test program from taskwatcher suite.')

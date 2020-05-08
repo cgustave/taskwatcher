@@ -10,7 +10,11 @@ launcher from the taskwatcher suite
 import logging as log
 import os
 import sys
+import json
+import psutil
+import time
 import argparse
+from database import Database
 
 class Launch(object):
     """
@@ -50,13 +54,36 @@ class Launch(object):
         log.info("Constructor with taskid={} db={}  name={} feedpath={} timeout={} debug={}".
           format(taskid, db, name, feedpath, timeout, debug))
  
-        # Attributes
+        # Public Attributs
         self.taskid = taskid
         self.db = db
         self.name = name 
         self.feedpath = feedpath
-        self.timeout = timeout
+        if not timeout:
+            timeout = 30 
+            
+        self.timeout = int(timeout)
         self.command = None
+        self.forked_pid = None 
+        self.will_feedback = False
+        self.starttime = None
+
+        # Private attributs
+        self._DB = Database(db=db, debug=debug) 
+        self._check_feedback_retry = 0
+
+
+    def clear_to_start_task(self):
+        """
+        Returns True if task if clear to be started
+        This mean taskid has is known in reserve status
+        """
+        log.info("Enter")
+        
+        if self._DB.is_task_reserved(taskid=self.taskid):
+            return True
+        else:
+            return False
 
 
     def execute(self, command=""):
@@ -64,6 +91,145 @@ class Launch(object):
         Execute provided command in a child process
         """
         log.info("Enter with command={}".format(command))
+
+        # Make reservation of pid is ok
+        if not self.clear_to_start_task():
+            print("taskid={} is not clear to start".format(self.taskid))
+            log.error("taskid={} is not clear to start".format(self.taskid))
+            raise SystemExit
+
+        # Learn if task is supposed to feedback
+        if self._task_will_feedback(command=command):
+            self.will_feedback = True
+
+        pid = os.fork()
+        self.forked_pid = pid
+
+        if not pid:
+            log.debug("Son : I am a just forked child process")
+            self.child(command=command)
+            sys.exit(1)
+
+        log.debug("Father : Forked child with pid={}".format(pid)) 
+        self.father_loop()
+
+       
+    def father_loop(self):
+        """
+        Father code after fork
+        """
+        log.info("Enter")
+
+        self._move_task_to_status_running(self.taskid)
+
+        child_healthy = True
+        while child_healthy:
+
+            child_healthy = self.father_check_child_health()
+            time.sleep(3)
+            log.debug("Father: still alive, child_healthy={}".format(child_healthy))
+
+        log.debug("Father: child pid={} is not healthy".format(self.forked_pid))
+
+        # Prevent zombies!  Reap the child after exit
+        pid, status = os.waitpid(0, 0)
+        log.debug("Child exited: pid {} returned status {}".format(pid,status))
+        if pid == self.forked_pid:
+            self._remove_running_task(pid=pid,status=status)
+        else:
+            sys.exit("should not see this")
+
+
+    def father_check_child_health(self):
+        """
+        Returns True if child is alive
+        If childs provide feedback, check the heartbeat   
+        Heartbeat should be checked from feedback file update time
+        """
+        log.info("Enter")
+   
+        # Avoid race condition, make sure child had time to
+        # open the feedback file
+        time.sleep(1)
+
+        # check process status
+        healthy = self.father_checks_child_process_status_ok()
+
+        if healthy:
+            if self.will_feedback:
+                if not self.father_checks_child_feedback_ok():
+                    healthy = False
+
+        log.debug("taskid {} pid {} healthy={}"
+                  .format(self.taskid, self.forked_pid, healthy))
+
+        if healthy:
+            self._update_running_task()
+
+        log.debug("healthy={}".format(healthy))
+        return healthy
+
+
+    def father_checks_child_process_status_ok(self):
+        """
+        Check process pid is known and child is not a zombie
+        """
+        log.info("Enter")
+
+        healthy = True
+        # check process still exists
+        if psutil.pid_exists(self.forked_pid):
+            log.debug("Father: taskid={} process pid={} exists".
+                        format(self.taskid, self.forked_pid))
+
+            # Process may be in defunct state if child has finished
+            status = psutil.Process(self.forked_pid).status()
+            if status == 'zombie':
+                log.warning("Father: taskid={} process pid={} status={}".
+                            format(self.taskid, self.forked_pid, status))
+                healthy = False
+
+        else:
+            log.debug("Father: taskid={} process pid={} is dead".
+                      format(self.taskid, self.forked_pid))
+            healthy = False
+
+        log.debug("healthy={}".format(healthy))
+        return healthy
+
+
+    def father_checks_child_feedback_ok(self):
+        """
+        If process is supposed to feedback,
+        check if it updates feedbackfile in time
+        """
+        log.info("Enter")
+
+        healthy = True
+        try:
+            currenttime = int(time.time())
+            updatetime = int(os.path.getmtime(self.updatefile_name()))
+            
+            if (currenttime - updatetime) > self.timeout:
+                log.debug("taskid {} pid {} has timeout: {} > {}"
+                       .format(self.taskid, self.forked_pid, (currenttime - updatetime), self.timeout))
+                healthy = False
+
+        except Exception as e:
+            log.warning("attempt={} : error: {}".format(self._check_feedback_retry, e))
+            self._check_feedback_retry = self._check_feedback_retry + 1
+
+        if self._check_feedback_retry > 2:
+            log.error("Could not check feedback file after 3 attempts")
+            sys.exit("Could not check feedback file after 3 attempts")
+
+        return healthy
+
+
+    def child(self, command=""):
+        """
+        Child code after fork
+        """
 
         # Prepare command and args for exec
         # args : starts with the command name
@@ -75,13 +241,99 @@ class Launch(object):
         log.debug("cmd_list {}".format(cmd_list))
 
         try:
+            log.debug("Child : exec with command={}".format(command))
             os.execvp(cmd_list[0], cmd_list)
         except Exception as e:
             log.debug("Error {}".format(e))
             raise SystemExit
 
-        log.debug("End of program")
-        os._exit(0)
+        log.error("Child : should not see this !")
+        os._exit(1)
+
+
+    def _task_will_feedback(self,command):
+        """
+        Determine from the command line if a task is expected to provide
+        feedack. Checks --feedback pattern in command string
+        """
+        log.info ("Enter with command={}".format(command))
+
+        cmd_split = command.split()
+
+        if '--feedback' in cmd_split:
+            log.debug("task will feedback")
+            return True
+        else :
+            log.debug("task won't feedback")
+            return False
+
+    def _move_task_to_status_running(self,taskid):
+        """
+        Change tasks status to reflect the running state just after the task is
+        started
+        """
+        log.info("Enter with taskid={}".format(taskid))
+
+        if not taskid:
+            log.error("taskid required")
+            raise SystemExit
+
+        update = {}
+        update['status'] = 'RUNNING'
+        update['pid'] = self.forked_pid
+        update['feedback']= self.will_feedback
+        self.starttime =  int(time.time())
+        update['starttime'] = self.starttime 
+        update['timeout']= self.timeout 
+        self._DB.update_task(taskid=self.taskid, update=update)
+
+
+    def _update_running_task(self):
+        """
+        Update database when child is runninig in good health
+        """
+        log.info("Enter")
+
+        update = {}
+        lastupdate = int(time.time())
+        update['lastupdate'] = lastupdate
+        update['duration'] = lastupdate - self.starttime 
+        self._DB.update_task(taskid=self.taskid, update=update)
+
+
+    def _remove_running_task(self, pid='', status=''):
+        """
+        Child is dead, remove running task and archive in history
+        """
+        log.info("Enter with pid={} status={}".format(pid,status))
+
+        entry = {}
+        task = json.loads(self._DB.return_tasks(taskid=self.taskid))
+
+        # Add history entry from the latest task info
+        entry['taskid'] = self.taskid
+        entry['taskname'] = task[self.taskid]['name']
+        entry['termsignal'] = status
+        entry['termerror'] = "TBD"
+        entry['starttime'] = task[self.taskid]['starttime']
+        endtime = int(time.time())
+        entry['endtime'] = endtime
+        entry['duration'] = endtime - task[self.taskid]['starttime']
+        entry['feedback'] = "to be implemented"
+        self._DB.add_history(entry=entry)
+
+        # Delete task
+        self._DB.delete_task(taskid=self.taskid)
+
+
+    def updatefile_name(self):
+        """
+        Returns the expected task update file name from taskid and feedpath
+        """
+        log.info("Enter")
+        update_file_name = "feedback_"+str(self.taskid)+".log"
+        return update_file_name
+
 
                  
 if __name__ == '__main__': #pragma: no cover
@@ -91,7 +343,9 @@ if __name__ == '__main__': #pragma: no cover
     parser.add_argument('--name', help="Task name")
     parser.add_argument('--db', help="sqlite db file", required=True)
     parser.add_argument('--feedpath', help="Path where feedback file is expected")
+    parser.add_argument('--timeout', help="timeout timer for the task")
     parser.add_argument('--debug', '-d', help="Debugging on", action="store_true")
+
 
     # Get our command args, after the --
     parser.add_argument('command', nargs=argparse.REMAINDER, help="Our command to run (ex: ./command -option1 -option2 foo)")
@@ -117,7 +371,7 @@ if __name__ == '__main__': #pragma: no cover
     #else:
 
     launcher=Launch(taskid=args.taskid, name=args.name, db=args.db,
-                    feedpath=args.feedpath, debug=args.debug)
+                    feedpath=args.feedpath, timeout=args.timeout, debug=args.debug)
 
     launcher.execute(command_line)
 
