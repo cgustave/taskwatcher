@@ -67,6 +67,7 @@ class Launch(object):
         self.forked_pid = None 
         self.will_feedback = False
         self.starttime = None
+        self.father_check_delay = 2
 
         # Private attributs
         self._DB = Database(db=db, debug=debug) 
@@ -83,24 +84,42 @@ class Launch(object):
         if self._DB.is_task_reserved(taskid=self.taskid):
             return True
         else:
+            log.warning("task has no reservation")
             return False
 
 
     def execute(self, command=""):
         """
         Execute provided command in a child process
+        If program is expected to feedback, it should have an option --feedback
+        to provide feedback file name.
+        If feedback is expected, a reservation is required (so feedback file is
+        determined for both contol and launched program
         """
         log.info("Enter with command={}".format(command))
-
-        # Make reservation of pid is ok
-        if not self.clear_to_start_task():
-            print("taskid={} is not clear to start".format(self.taskid))
-            log.error("taskid={} is not clear to start".format(self.taskid))
-            raise SystemExit
 
         # Learn if task is supposed to feedback
         if self._task_will_feedback(command=command):
             self.will_feedback = True
+
+        # Sanity
+        if not self.taskid:
+            if self.will_feedback:
+                # If the program is supposed to feedback, it needs a
+                # reservation known in advanced so it can provide the correct
+                # feedback file name
+                log.error("taskid is required if task is expected to feedback, --feedback is set")
+                sys.exit("taskid is required if task is expected to feedback, --feedback is set")
+            else:
+                log.debug("task is not expected to feedback, doing automatic reservation")
+                taskid = self._DB.reserve_task(taskname=self.name)
+                self.taskid = taskid
+                log.debug("automatique reservation gave taskid={}".format(taskid))
+
+        # Check reservation is ok
+        if not self.clear_to_start_task():
+            log.error("taskid={} is not clear to start".format(self.taskid))
+            sys.exit("taskid={} is not clear to start".format(self.taskid))
 
         pid = os.fork()
         self.forked_pid = pid
@@ -126,7 +145,7 @@ class Launch(object):
         while child_healthy:
 
             child_healthy = self.father_check_child_health()
-            time.sleep(3)
+            time.sleep(self.father_check_delay)
             log.debug("Father: still alive, child_healthy={}".format(child_healthy))
 
         log.debug("Father: child pid={} is not healthy".format(self.forked_pid))
@@ -242,6 +261,8 @@ class Launch(object):
 
         try:
             log.debug("Child : exec with command={}".format(command))
+            env_path = os.getenv('PATH')
+            log.debug("Child : PATH={}".format(env_path))
             os.execvp(cmd_list[0], cmd_list)
         except Exception as e:
             log.debug("Error {}".format(e))
@@ -310,20 +331,23 @@ class Launch(object):
         entry = {}
         task = json.loads(self._DB.return_tasks(taskid=self.taskid))
 
+        # taskid must be a string to be used in dictionary
+        taskid = str(self.taskid)
+
         # Add history entry from the latest task info
-        entry['taskid'] = self.taskid
-        entry['taskname'] = task[self.taskid]['name']
+        entry['taskid'] = taskid
+        entry['taskname'] = task[taskid]['name']
         entry['termsignal'] = status
         entry['termerror'] = "TBD"
-        entry['starttime'] = task[self.taskid]['starttime']
+        entry['starttime'] = task[taskid]['starttime']
         endtime = int(time.time())
         entry['endtime'] = endtime
-        entry['duration'] = endtime - task[self.taskid]['starttime']
+        entry['duration'] = endtime - task[taskid]['starttime']
         entry['feedback'] = "to be implemented"
         self._DB.add_history(entry=entry)
 
         # Delete task
-        self._DB.delete_task(taskid=self.taskid)
+        self._DB.delete_task(taskid=taskid)
 
 
     def updatefile_name(self):

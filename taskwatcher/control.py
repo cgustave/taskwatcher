@@ -10,6 +10,7 @@ controller from the taskwatcher suite
 import logging as log
 import argparse
 import json
+import sys
 from database import Database
 
 class Control(object):
@@ -60,13 +61,19 @@ class Control(object):
         log.info("Enter")
         self._DB.update()
 
-    def reserve(self):
+    def reserve(self, taskname="", unique=False):
         """
         Reserve a free taskid and return it
         Should be called before a task can be created
+        Task is reserved with taskname 'taskname'
+        If unique is set, the reservation will only complete if no other task
+        with this name is running
         """
-        log.info("Enter")
-        taskid = self._DB.reserve_task()
+        log.info("Enter with taskname={}".format(taskname))
+        taskid = self._DB.reserve_task(taskname=taskname, unique=unique)
+        if not taskid:
+            log.error("Could not reserve task, already exist and unique is set")
+            sys.exit("Could not reserve task, already exist and unique is set")
         return taskid
 
 
@@ -156,6 +163,8 @@ if __name__ == '__main__': #pragma: no cover
     parser_task.set_defaults(func='task')
     parser_task.add_argument('--list', help='list tasks', action="store_true")
     parser_task.add_argument('--reserve', help="reserve a taskid", action="store_true")
+    parser_task.add_argument('--unique', help="taskname should be unique", action="store_true")
+    parser_task.add_argument('--taskname', help="taskname")
     parser_task.add_argument('--feedback', metavar='taskid', help="returns feedback")
     parser_task.add_argument('--kill', metavar='taskid', help="kill task from its taskid")
     parser_task.add_argument('--killall', metavar='taskname', help="kill all tasks by name")
@@ -190,7 +199,10 @@ if __name__ == '__main__': #pragma: no cover
             else:
             	print(controller.return_tasks())
         if args.reserve:
-            taskid = controller.reserve()
+            taskname = args.taskname
+            if not taskname:
+                taskname = "noname"
+            taskid = controller.reserve(taskname=taskname, unique=args.unique)
             print("Taskid {} has been reserved".format(taskid))
 
     # database

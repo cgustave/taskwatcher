@@ -45,6 +45,7 @@ class Database(object):
 
         # Attributs
         self.db = db
+        self.reserve_timeout = 5
 
         # Private Attributs
         self._DB = None
@@ -96,9 +97,9 @@ class Database(object):
         Update database information
         This command should be call on a regular basis to update duration information
 
-        If a taskid is provided, only the specific task is updated
-        In this case only, a True/False is return to tell if the task has
-        timed-out
+        - delete tasks with reservation timeout
+        - running task has timeout :  If a taskid is provided, only the specific task is updated
+          In this case only, a True/False is return to tell if the task has timed-out
         """
         log.info("Enter")
 
@@ -107,6 +108,17 @@ class Database(object):
         duration = None
 
         for t in tasks:
+
+            # Reserved task timeout
+            status = tasks[t]['status']
+            reservetime = tasks[t]['reservetime']
+            delta = updatetime - reservetime
+            if status=='RESERVED' and ( delta > self.reserve_timeout):
+                log.warning("reservation timeout updatetime={} reservetime={} (delta={}) reserve_timeout={}, delete task".
+                            format(updatetime, reservetime, delta, self.reserve_timeout))
+                self.delete_task(taskid=t)
+
+            # running task timeout
             starttime = tasks[t]['starttime']
             timeout = tasks[t]['timeout']
             if starttime:
@@ -128,7 +140,7 @@ class Database(object):
 
     def timeout_status (self, taskid):
         """
-        Inform if the task has reached timeout if it was not updated since the
+        Inform if a running task has reached timeout if it was not updated since the
         maximum allowed timeout value
         """
         log.info("Enter with taskid={}".format(taskid))
@@ -141,21 +153,34 @@ class Database(object):
         return status
 
 
-    def reserve_task(self):
+    def reserve_task(self, taskname="", unique=False):
         """
         Inserts a new task for a reservation
         Returns the id of the created return_tasks
+        If taskname and unique provided, only accept reservation if no other
+        tasks with this name is running. If so, return taskid=0
+        Before reservation attempt, call update to delete expired tasks in
+        reserve status
         """
-        log.info("Enter with entry")
+        log.info("Enter with entry with taskname={} unique={}".format(taskname,unique))
+
+        # Delete tasks in reserve status which have expired
+        self.update()
 
         lastid = None
         reservetime=int(time.time())
 
+        if taskname and unique:
+            log.debug("check if task with taskname={} is already known".format(taskname))
+            if not self.is_taskname_unique(taskname):
+                log.warning("a task with the same name is currently active and unique is set. Can't reserve")
+                return 0
+
         try:
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
-            cursor.execute('''INSERT INTO tasks(id, status, reservetime)
-                           VALUES(?,?,?)''', [ None,'RESERVED', reservetime])
+            cursor.execute('''INSERT INTO tasks(id, name, status, reservetime)
+                           VALUES(?,?,?,?)''', [ None, taskname, 'RESERVED', reservetime])
             lastid = cursor.lastrowid
             self._DB.commit()
 
@@ -168,7 +193,32 @@ class Database(object):
              self._DB.close()
 
         log.debug("lastid={}".format(lastid))
-        return lastid
+        return (lastid)
+
+
+    def is_taskname_unique(self, taskname=""):
+        """
+        Return True if there are no active task with the same taskname
+        """
+        log.info("Enter with taskname={}".format(taskname))
+
+        try:
+            self._DB = sqlite3.connect(self.db)
+            cursor = self._DB.cursor()
+            cursor.execute('''SELECT id, name, status FROM tasks WHERE name=?''', [taskname])  
+            task = cursor.fetchone()
+            if task:
+                log.debug("a taskname={} is already know (taskid={} status={})".
+                          format(taskname, task[0], task[1]))
+                return False
+            else:
+                return True
+
+        except Exception as e:
+            raise e
+
+        finally:
+            self._DB.close()
 
 
     def is_task_reserved(self, taskid=''):
@@ -177,7 +227,7 @@ class Database(object):
         Parameter : taskid
         Returns : True/False
         """
-        log.info("Enter")
+        log.info("Enter with taskid={}".format(taskid))
 
         try:
             self._DB = sqlite3.connect(self.db)
@@ -214,8 +264,13 @@ class Database(object):
             log.warning("no updated provided, ignoring")
             return 
 
+        # taskid need to be a string to be used as a dictionary key
+        taskid=str(taskid)
+        log.debug("update={}".format(update))
         task = json.loads(self.return_tasks(taskid=taskid))
+        log.debug("task={}".format(task))
         for key in update:
+            log.debug("key={} taskid={}".format(key,taskid))
             if key not in task[taskid]:
                 log.error("key={} is unknown from table tasks".format(key))
                 raise SystemExit

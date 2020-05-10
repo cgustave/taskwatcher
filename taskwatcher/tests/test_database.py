@@ -35,6 +35,11 @@ class DatabaseTestCase(unittest.TestCase):
         self.db.reserve_task()
         self.assertTrue(self.db.is_task_reserved(taskid='1'))
 
+    def test_reserve_unique(self):
+        self.db.reserve_task(taskname="MyTask")
+        taskid = self.db.reserve_task(taskname="MyTask", unique=True)
+        self.assertEqual(taskid, 0)
+
     # Update task
     def test_update_task(self):
         update = {}
@@ -47,7 +52,6 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(js['1']['status'], 'RUNNING')
 
     # Database update
-
     def force_task_started(self, taskid='1'):
         # Force some tasks to be started (in timeout state)
         update = {}
