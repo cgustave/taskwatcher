@@ -117,6 +117,42 @@ class Control(object):
             sys.exit("unknown taskid, won't kill")
 
 
+    def killall_tasks(self, taskname=None):
+        """
+        Kills all tasks with the given name
+        """
+        log.info("Enter with taskname={}".format(taskname))
+
+        # Sanity
+        if not taskname:
+            log.error("Taskname is required")
+            sys.exit("Taskname is required")
+
+        if taskname == "":
+            log.error("Taskname cannot be empty string")
+            sys.exit("Taskname cannot be empty string")
+
+        # Go through task list, check name, make sure this is not a task in
+        # status RESERVED and kill if not a system task 
+        tasks = json.loads(self.get_tasks())
+        for taskid in tasks:
+            name = tasks[taskid]['name']
+            pid = tasks[taskid]['pid']
+            status = tasks[taskid]['status']
+
+            if name == taskname:
+                log.debug("Found taskid={} pid={} status={}".format(taskid, pid, status))
+                if status == "RESERVED":
+                    log.info("task is in status reserved, not running, won't kill")
+
+                p = psutil.Process(pid)
+                if p.username != 'SYSTEM':
+                    log.info("killing taskid={} name={} pid={} status={}".format(taskid,name,pid,status))
+                    p.kill()
+                else:
+                    log.warning("This is a system process, won't kill")
+
+
     def get_number_of_tasks(self):
         """
         Returns number of active tasks, 0 if none
@@ -257,6 +293,9 @@ if __name__ == '__main__': #pragma: no cover
 
         elif args.kill:
             controller.kill_task(taskid=args.kill)
+
+        elif args.killall:
+            controller.killall_tasks(taskname=args.killall)
 
     # database
     elif args.func == 'database':

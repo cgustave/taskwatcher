@@ -139,7 +139,7 @@ class Launch(object):
         """
         log.info("Enter")
 
-        self._move_task_to_status_running(self.taskid)
+        self._move_task_to_status_running()
 
         child_healthy = True
         while child_healthy:
@@ -288,18 +288,22 @@ class Launch(object):
             log.debug("task won't feedback")
             return False
 
-    def _move_task_to_status_running(self,taskid):
+    def _move_task_to_status_running(self):
         """
         Change tasks status to reflect the running state just after the task is
         started
         """
-        log.info("Enter with taskid={}".format(taskid))
+        log.info("Enter")
 
-        if not taskid:
-            log.error("taskid required")
+        if not self.taskid:
+            log.error("taskid is required")
             raise SystemExit
 
         update = {}
+
+        if self.name:
+            update['name'] = self.name
+
         update['status'] = 'RUNNING'
         update['pid'] = self.forked_pid
         update['feedback']= self.will_feedback
