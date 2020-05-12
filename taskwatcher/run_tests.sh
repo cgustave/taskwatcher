@@ -1,8 +1,5 @@
 #!/bin/bash
 
-PYTHONPATH=/home/cgustave/github/python/packages/taskwatcher/venv/lib/python3.7/site-packages
-PYTHONPATH=$PYTHONPATH:/home/cgustave/github/python/packages/taskwatcher/taskwatcher:/home/cgustave/github/python/packages/taskwatcher/taskwatcher/tests
-export $PYTHONPATH
 export PATH=$PATH:/home/cgustave/github/python/packages/taskwatcher/taskwatcher/tests
 
 echo "***" > debug.log

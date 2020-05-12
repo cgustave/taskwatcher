@@ -329,7 +329,7 @@ class Launch(object):
         log.info("Enter with pid={} status={}".format(pid,status))
 
         entry = {}
-        task = json.loads(self._DB.return_tasks(taskid=self.taskid))
+        task = json.loads(self._DB.get_tasks(taskid=self.taskid))
 
         # taskid must be a string to be used in dictionary
         taskid = str(self.taskid)

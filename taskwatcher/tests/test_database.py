@@ -27,28 +27,33 @@ class DatabaseTestCase(unittest.TestCase):
         self.db = Database(db='sqlite.db', debug=True)
 
     # Database creation
-    def test_create(self):
+    def test010_create(self):
         self.db.create()
 
     # Reserve task
-    def test_reserve(self):
+    def test020_reserve(self):
         self.db.reserve_task()
         self.assertTrue(self.db.is_task_reserved(taskid='1'))
 
-    def test_reserve_unique(self):
+    def test030_reserve_unique(self):
         self.db.reserve_task(taskname="MyTask")
         taskid = self.db.reserve_task(taskname="MyTask", unique=True)
         self.assertEqual(taskid, 0)
 
+    def test040_count_nb_tasks(self):
+        self.db.reserve_task(taskname="MyTask")
+        nb_tasks = self.db.get_number_of_tasks()
+        self.assertEqual(nb_tasks, 3)
+
     # Update task
-    def test_update_task(self):
+    def test050_update_task(self):
         update = {}
         update['name'] = "MyTestTask"
         update['pid'] = 120
         update['status'] = "RUNNING"
         update['starttime'] = int(time.time())
         self.db.update_task(taskid='1', update=update)
-        js = json.loads(self.db.return_tasks(taskid='1'))
+        js = json.loads(self.db.get_tasks(taskid='1'))
         self.assertEqual(js['1']['status'], 'RUNNING')
 
     # Database update
@@ -62,28 +67,28 @@ class DatabaseTestCase(unittest.TestCase):
         update['timeout'] = 30
         self.db.update_task(taskid=taskid, update=update)
 
-    def test_update(self):
+    def test060_update(self):
         self.force_task_started(taskid='1')
         self.db.update()
 
-    def test_timeout_status(self):
+    def test070_timeout_status(self):
         self.force_task_started(taskid='1')
         status = self.db.timeout_status(taskid='1')
         self.assertTrue(status)
 
     # Update feedback
-    def test_update_feedback_insert(self):
+    def test080_update_feedback_insert(self):
         # First time would be a creation
         feedback = "{ 'person' : 'john', 'animal' : { 'name' : 'Lune', 'color' : 'black', 'gender' : 'female'} }"
         self.db.update_feedback(taskid='1', feedback=feedback)
-        js = json.loads(self.db.return_feedbacks(taskid='1'))
+        js = json.loads(self.db.get_feedbacks(taskid='1'))
         self.assertEqual(js['1']['feedback'], feedback)
 
-    def test_update_feedback_update(self):
+    def test090_update_feedback_update(self):
         # Second time and update
         feedback = "{ 'person' : 'Lucie', 'animal' : { 'name' : 'Rex', 'color' : 'white', 'gender' : 'male'} }"
         self.db.update_feedback(taskid='1', feedback=feedback)
-        js = json.loads(self.db.return_feedbacks(taskid='1'))
+        js = json.loads(self.db.get_feedbacks(taskid='1'))
         self.assertEqual(js['1']['feedback'], feedback)
 
     # history
@@ -100,9 +105,9 @@ class DatabaseTestCase(unittest.TestCase):
         entry['feedback'] = "{ 'person' : 'john', 'animal' : { 'name' : 'Lune', 'color' : 'black', 'gender' : 'female'} }"
         self.db.add_history(entry=entry)
 
-    def test_return_history(self):
+    def test100_get_history(self):
         self.add_history()
-        js = json.loads(self.db.return_history())
+        js = json.loads(self.db.get_history())
         self.assertEqual(js['1']['taskname'],"MyTestTask")
 
 if __name__ == '__main__':

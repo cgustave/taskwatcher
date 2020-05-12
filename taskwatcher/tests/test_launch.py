@@ -26,10 +26,8 @@ class LaunchTestCase(unittest.TestCase):
     def setUp(self):
         self.lnc = Launch(db='sqlite.db', debug=True)
 
-    #def test_reserve(self):
-
    
-    def test_execute_nofeedback(self):
+    def test10_execute_nofeedback(self):
         command = "tests/testprog.py  --scenario sleeping --sleep 10 --debug"
         self.lnc.execute(command=command)
         

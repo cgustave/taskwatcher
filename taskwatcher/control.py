@@ -11,6 +11,7 @@ import logging as log
 import argparse
 import json
 import sys
+import psutil
 from database import Database
 
 class Control(object):
@@ -76,22 +77,62 @@ class Control(object):
             sys.exit("Could not reserve task, already exist and unique is set")
         return taskid
 
-
-    def return_tasks(self):
+    def get_tasks(self):
         """
         Returns a dictionary listing the current tasks
         """
         log.info("Enter")
-        task = self._DB.return_tasks()
+        task = self._DB.get_tasks()
         log.debug("task={}".format(task))
         return task
+
+
+    def kill_task(self, taskid=None):
+        """
+        Kills a task from its taskid
+        """
+        log.info("Enter with taskid={}".format(taskid))
+        if not taskid:
+            log.error("taskid is required")
+            sys.exit("taskid is required")
+
+        # make sure task is still active
+        tasks = json.loads(self.get_tasks())
+        if str(taskid) in tasks:
+            if tasks[taskid]['status'] == "RESERVED":
+                log.warning("task is in status reserved, not running, won't kill")
+                sys.exit("task is in status reserved, not running, won't kill")
+                
+            pid = tasks[taskid]['pid']
+            status = tasks[taskid]['status']
+            log.debug("Task is still active killing pid={} status={}".format(pid,status))
+            p = psutil.Process(pid)
+            if p.username != 'SYSTEM':
+                p.kill()
+            else:
+                log.warning("This is a system process, won't kill")
+
+        else:
+            log.warning("unknown taskid={} won't kill".format(taskid))
+            sys.exit("unknown taskid, won't kill")
+
+
+    def get_number_of_tasks(self):
+        """
+        Returns number of active tasks, 0 if none
+        Return : integer
+        """
+        log.info("Enter")
+        nb_task = self._DB.get_number_of_tasks()
+        return nb_task
+
 
     def print_tasks(self):
         """
         Prints a human formatted listing of the current tasks
         """
         log.info("Enter")
-        tasklist = json.loads(self.return_tasks())
+        tasklist = json.loads(self.get_tasks())
 
 
         line = 1 ;
@@ -116,13 +157,16 @@ class Control(object):
         if line > 1:
             print("----------------------------------------------------------------------------------------------------------------------------------------")
 
+        if line==1:
+            print("No tasks.")
 
-    def return_history(self):
+
+    def get_history(self):
         """
         Returns history list in json format
         """
         log.info("Enter")
-        history = self._DB.return_history()
+        history = self._DB.get_history()
         log.debug("history={}".format(history))
         return history
 
@@ -132,7 +176,7 @@ class Control(object):
         Print a human formatted listing of history
         """
         log.info("Enter")
-        historylist =  json.loads(self.return_history())
+        historylist =  json.loads(self.get_history())
 
         print("----------------------------------------------------------------------------------------------------------------------------------------")
         print("|    id    | task id  |      task name       | termsignal | termerror | starting time | ending time | duration |      feedback         |") 
@@ -197,17 +241,22 @@ if __name__ == '__main__': #pragma: no cover
 
     # tasks
     if args.func == 'task':
+
         if args.list:
             if args.json:
-            	print(controller.return_tasks())
+            	print(controller.get_tasks())
             else:
             	controller.print_tasks()
-        if args.reserve:
+
+        elif args.reserve:
             taskname = args.taskname
             if not taskname:
                 taskname = "noname"
             taskid = controller.reserve(taskname=taskname, unique=args.unique)
             print("Taskid {} has been reserved".format(taskid))
+
+        elif args.kill:
+            controller.kill_task(taskid=args.kill)
 
     # database
     elif args.func == 'database':
@@ -223,8 +272,8 @@ if __name__ == '__main__': #pragma: no cover
             if args.human:
                 controller.print_history()
             else:
-                print(controller.return_history())
+                print(controller.get_history())
 
-            controller._DB.return_history()
+            controller._DB.get_history()
         
 

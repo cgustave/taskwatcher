@@ -27,18 +27,24 @@ class ControlTestCase(unittest.TestCase):
         self.ctrl = Control(db='sqlite.db', debug=True)
 
     # Initialize 
-    def test_initialize(self):
+    def test010_initialize(self):
         self.ctrl.initialize()
 
     # Reserve
-    def test_reserve(self):
+    def test020_reserve(self):
         taskid = self.ctrl.reserve()
         self.assertEqual(taskid, 1)
 
     # List tasks
-    def test_return_tasks(self):
-        result =  json.loads(self.ctrl.return_tasks())
+    def test030_get_tasks(self):
+        result =  json.loads(self.ctrl.get_tasks())
         self.assertEqual(result['1']['status'], 'RESERVED')
+
+    # Get number of tasks
+    def test040_get_number_of_tasks(self):
+        result = self.ctrl.get_number_of_tasks()
+        self.assertEqual(result, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

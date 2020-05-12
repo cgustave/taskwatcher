@@ -103,7 +103,7 @@ class Database(object):
         """
         log.info("Enter")
 
-        tasks = json.loads(self.return_tasks(taskid=taskid))
+        tasks = json.loads(self.get_tasks(taskid=taskid))
         updatetime = int(time.time())
         duration = None
 
@@ -267,7 +267,7 @@ class Database(object):
         # taskid need to be a string to be used as a dictionary key
         taskid=str(taskid)
         log.debug("update={}".format(update))
-        task = json.loads(self.return_tasks(taskid=taskid))
+        task = json.loads(self.get_tasks(taskid=taskid))
         log.debug("task={}".format(task))
         for key in update:
             log.debug("key={} taskid={}".format(key,taskid))
@@ -315,7 +315,7 @@ class Database(object):
              self._DB.close()
 
     
-    def return_tasks(self, taskid=None):
+    def get_tasks(self, taskid=None):
         """
         Returns all tasks as a string in a json format
         If a taskid is provided, only return for this task
@@ -360,6 +360,33 @@ class Database(object):
         
         return result_json
 
+    def get_number_of_tasks(self):
+        """
+        Returns the number of running tasks
+        """
+        log.info("Enter")
+        nb_tasks = 0 
+
+        try:
+            self._DB = sqlite3.connect(self.db)
+            cursor = self._DB.cursor()
+            cursor.execute('''SELECT count(id) FROM tasks''')
+            result = cursor.fetchone()
+            if result:
+                nb_tasks = result[0]
+            else :
+                nb_tasks = 0
+                
+        except Exception as e:
+            self._DB.rollback()
+            raise e
+
+        finally:
+            self._DB.close()
+       
+        log.debug("nb_tasks={}".format(nb_tasks))
+        return nb_tasks 
+
 
     def delete_task(self, taskid=None):
         """
@@ -388,7 +415,7 @@ class Database(object):
 
     # --- feedbacks ---
 
-    def return_feedbacks(self, taskid=None):
+    def get_feedbacks(self, taskid=None):
         """
         Returns all feedbacks as a string in a json format
         If a taskid is provided, only return for this task
@@ -436,7 +463,7 @@ class Database(object):
             log.error("no feedback provided")
             raise SystemExit
 
-        fb = json.loads(self.return_feedbacks(taskid=taskid))
+        fb = json.loads(self.get_feedbacks(taskid=taskid))
 
         if not fb:
             # This is a new entry 
@@ -526,7 +553,7 @@ class Database(object):
              self._DB.close()
 
 
-    def return_history(self):
+    def get_history(self):
         """
         Return all historical tasks in a json format
         """
