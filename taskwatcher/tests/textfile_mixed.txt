@@ -1,8 +1,10 @@
 [animal]cat
 [animal]dog
+[country]France
 # This is a comment line followed by 2 empty lines',
 
 
+[country]
 [person]joe
 [town]London
 [town]Paris
@@ -12,6 +14,6 @@
 [progress]36
 [progress]50
 [progress]60
-[name]=Paul Emile Victor de la Petaudiere
+[name]Paul Emile Victor de la Petaudiere
 
 

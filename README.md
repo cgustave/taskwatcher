@@ -15,6 +15,18 @@ Optionally, if feedback is provided by the launched program, program is expected
 
 An optional **task timeout** may terminated the task if no hearbeat was received during the allowed 'timeout' period.  
 
+There are conditions applies so a task can start, multiple scenario :
+
+1) Task does not provide feedack, can run multiple time:
+- no control need, a call to lauch would be enough, task would be automatically reserved and launched
+
+2) Task does not provide feeback but only one of this kind should work at a given timer:
+- a reservation with a task name and option --unique set should be done befor calling launch. A taskid would be returned, use this task id in call to lauch.
+
+3) Task provides feeback.
+- Reservation is required prior calling launch.  
+- If task should only run once, use --unique option during reservation.  
+
 Prior to any launch call to start a new task, a taskid (number) should have been reserved with a call control.py --reserve.
 
 
@@ -42,7 +54,7 @@ A basic file-based sqlite database is used to store running tasks data and keep 
 #### Expectation from the launched command
 
 A command may be ran without specific requirement, however to benefit from additional features, the run command may provide feedback via a text file.  
-The suggestion is to add to programs launched with taskwatcher a command line option to generate the **feedback** file.  
+The suggestion is to add to programs launched with taskwatcher a command line option (--feedback) to generate the **feedback** file.  
 The feedback file is expected to be named based on the taskid : feedback_TASKID.log
 Example :  
 

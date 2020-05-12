@@ -93,11 +93,13 @@ class Control(object):
         log.info("Enter")
         tasklist = json.loads(self.return_tasks())
 
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
-        print("| task id  |      task name       |   pid  |   status   | feedback | reserve time | starting time | duration | last update  | timeout  |")
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
 
+        line = 1 ;
         for task in tasklist:
+            if line == 1:
+                print("----------------------------------------------------------------------------------------------------------------------------------------")
+                print("| task id  |      task name       |   pid  |   status   | feedback | reserve time | starting time | duration | last update  | timeout  |")
+                print("----------------------------------------------------------------------------------------------------------------------------------------")
             print("| {:>8} | {:20} | {:>6} | {:>10} | {:>8} | {:>12} | {:>13} | {:>8} | {:>12} | {:>8} |".
                   format(task, 
                          str(tasklist[task]['name']),
@@ -110,7 +112,9 @@ class Control(object):
                          str(tasklist[task]['lastupdate']),
                          str(tasklist[task]['timeout']),
                         ))
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
+            line = line+1
+        if line > 1:
+            print("----------------------------------------------------------------------------------------------------------------------------------------")
 
 
     def return_history(self):
@@ -168,7 +172,7 @@ if __name__ == '__main__': #pragma: no cover
     parser_task.add_argument('--feedback', metavar='taskid', help="returns feedback")
     parser_task.add_argument('--kill', metavar='taskid', help="kill task from its taskid")
     parser_task.add_argument('--killall', metavar='taskname', help="kill all tasks by name")
-    parser_task.add_argument('--human', help="human readable output", action="store_true")
+    parser_task.add_argument('--json', help="json output", action="store_true")
    
 
     # history
@@ -194,10 +198,10 @@ if __name__ == '__main__': #pragma: no cover
     # tasks
     if args.func == 'task':
         if args.list:
-            if args.human:
-            	controller.print_tasks()
-            else:
+            if args.json:
             	print(controller.return_tasks())
+            else:
+            	controller.print_tasks()
         if args.reserve:
             taskname = args.taskname
             if not taskname:

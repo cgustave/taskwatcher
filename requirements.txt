@@ -1,1 +1,2 @@
 sqllite3
+psutil
