@@ -1,2 +1,3 @@
 sqllite3
+wheel
 psutil

@@ -2,10 +2,11 @@
 
 #### DESCRIPTION
 
-**'taskwatcher'** is a set of commands to turn scripts/programs into **tasks** :
+**'taskwatcher'** is a set of libraries/commands to turn scripts/programs into **tasks** :
 
 - **launch.py**  : Starts a new task under taskwatcher monitoring
 - **control.py** : General control commands
+- **parse.py**   : Feedback file parser, returns a json string from the feedback file
 
 An **history** of the terminated tasks is kept.  
 A **status** of the currently running tasks is available.
@@ -28,6 +29,8 @@ There are conditions applies so a task can start, multiple scenario :
 - If task should only run once, use --unique option during reservation.  
 
 Prior to any launch call to start a new task, a taskid (number) should have been reserved with a call control.py --reserve.
+
+A feedback file is a simple text file with key/value pairs. It can be parsed with parse.py to return a json formated string.
 
 
 ###### Limitations
@@ -107,6 +110,7 @@ Any kind of usefull information could be delivered as long as :
 - launch.py does not parse feedback file. It only checks the file update from the file update time for the task timeout fonction.
 - control.py processed feedback file to provide output.  
   The last read value for a keyword updates any precedent values.  
+- use parse.py to parse and retrieve json from the feedback file.  
 
 - Example of a feedback.log
 ~~~
@@ -204,10 +208,26 @@ List of available commands :
 
 ```
 
-#### typical usage
+#### parse.py
+
+```tex
+usage: parse.py [-h] [--debug] --feedback filename
+
+Task controller
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --debug, -d          turn on debug
+  --feedback filename  selects feedback file to process
 
 
-#### sqlite database
+Example: 
+ ./parse.py --feedback tests/textfile_progress.txt
+ {\"progress\": \"100\"}
+```
+
+
+### sqlite database
 
 An sqlite database is used for 3 purposes :
 

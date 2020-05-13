@@ -110,5 +110,5 @@ if __name__ == '__main__': #pragma: no cover
     
     parser=Parse(debug=args.debug)
     parser.load_file(file=args.feedback)
-    print("data={}".format(json.dumps(parser.get_data())))
+    print(json.dumps(parser.get_data()))
 
