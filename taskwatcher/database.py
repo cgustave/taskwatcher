@@ -320,10 +320,11 @@ class Database(object):
              self._DB.close()
 
     
-    def get_tasks(self, taskid=None):
+    def get_tasks(self, taskid=None, reserved=True):
         """
         Returns all tasks as a string in a json format
         If a taskid is provided, only return for this task
+        By default, reserved tasks are returned
         """
         log.info("Enter with taskid={}".format(taskid))
         result={}
@@ -347,6 +348,11 @@ class Database(object):
                           .format(row[0], row[1], row[2], row[3],row[4],
                                   row[5], row[6], row[7], row[8], row[9],
                                   row[10], row[11], row[12]))
+
+                if not reserved and row[6] == 'RESERVED':
+                    log.debug("ignore reserved task")
+                    continue
+
                 result[row[0]]= {}
                 result[row[0]]['name'] = row[1]
                 result[row[0]]['info1'] = row[2]

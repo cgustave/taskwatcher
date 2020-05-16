@@ -77,12 +77,13 @@ class Control(object):
             sys.exit("Could not reserve task, already exist and unique is set")
         return taskid
 
-    def get_tasks(self):
+    def get_tasks(self, reserved=True):
         """
         Returns a dictionary listing the current tasks
+        By default, reserved tasks are returned, use reserved=Fasle otherwise
         """
         log.info("Enter")
-        task = self._DB.get_tasks()
+        task = self._DB.get_tasks(reserved=reserved)
         log.debug("task={}".format(task))
         return task
 

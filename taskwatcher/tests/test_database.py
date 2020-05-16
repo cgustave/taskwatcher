@@ -35,6 +35,11 @@ class DatabaseTestCase(unittest.TestCase):
         self.db.reserve_task()
         self.assertTrue(self.db.is_task_reserved(taskid='1'))
 
+    def test025_reserve_ignored(self):
+        tlist = self.db.get_tasks(reserved=False)
+        log.debug("tlist={}".format(tlist))
+        self.assertEqual(tlist,  "{}" )
+
     def test030_reserve_unique(self):
         self.db.reserve_task(taskname="MyTask")
         taskid = self.db.reserve_task(taskname="MyTask", unique=True)
