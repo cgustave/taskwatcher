@@ -2,6 +2,9 @@
 
 export PATH=$PATH:/home/cgustave/github/python/packages/taskwatcher/taskwatcher/tests
 
+# This is require so modules have the correct import statement for database
+export PYTHONPATH=/home/cgustave/github/python/packages/taskwatcher
+
 echo "***" > debug.log
 echo "" >> debug.log
 

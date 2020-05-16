@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 import psutil
-from database import Database
+from taskwatcher.database import Database
 
 class Control(object):
     """

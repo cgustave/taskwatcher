@@ -14,7 +14,7 @@ import json
 import psutil
 import time
 import argparse
-from database import Database
+from taskwatcher.database import Database
 
 class Launch(object):
     """
