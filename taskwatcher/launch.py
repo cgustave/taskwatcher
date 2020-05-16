@@ -23,7 +23,7 @@ class Launch(object):
     Optional : name, feedpath, timeout
     Requirement : a taskid should have been reserved
     """
-    def __init__(self, taskid='', db='', name='', feedpath=None, timeout=30, debug=False):
+    def __init__(self, taskid='', db='', name='', info1='', info2='', info3='', feedpath=None, timeout=30, debug=False):
 
         # create logger
         log.basicConfig(
@@ -51,13 +51,16 @@ class Launch(object):
                print ("feedpath does not exist or is not a directory\n")
                raise SystemExit
 
-        log.info("Constructor with taskid={} db={}  name={} feedpath={} timeout={} debug={}".
-          format(taskid, db, name, feedpath, timeout, debug))
+        log.info("Constructor with taskid={} db={}  name={} info1={} info2={} info3={} feedpath={} timeout={} debug={}".
+          format(taskid, db, name, info1, info2, info3, feedpath, timeout, debug))
  
         # Public Attributs
         self.taskid = taskid
         self.db = db
         self.name = name 
+        self.info1 = info1
+        self.info2 = info2
+        self.info3 = info3
         self.feedpath = feedpath
         if not timeout:
             timeout = 30 
@@ -341,6 +344,9 @@ class Launch(object):
         # Add history entry from the latest task info
         entry['taskid'] = taskid
         entry['taskname'] = task[taskid]['name']
+        entry['info1'] = task[taskid]['info1']
+        entry['info2'] = task[taskid]['info2']
+        entry['info3'] = task[taskid]['info3']
         entry['termsignal'] = status
         entry['termerror'] = "TBD"
         entry['starttime'] = task[taskid]['starttime']
@@ -369,6 +375,9 @@ if __name__ == '__main__': #pragma: no cover
     parser = argparse.ArgumentParser(description='Launch program as a task.')
     parser.add_argument('--taskid', help="reserved task identifier", required=True)
     parser.add_argument('--name', help="Task name")
+    parser.add_argument('--info1', help="any information")
+    parser.add_argument('--info2', help="any information")
+    parser.add_argument('--info3', help="any information")
     parser.add_argument('--db', help="sqlite db file", required=True)
     parser.add_argument('--feedpath', help="Path where feedback file is expected")
     parser.add_argument('--timeout', help="timeout timer for the task")
@@ -398,7 +407,8 @@ if __name__ == '__main__': #pragma: no cover
     #    name=args.command[1]
     #else:
 
-    launcher=Launch(taskid=args.taskid, name=args.name, db=args.db,
+    launcher=Launch(taskid=args.taskid, name=args.name, info1=args.info1,
+                    info2=args.info2, info3=args.info3, db=args.db,
                     feedpath=args.feedpath, timeout=args.timeout, debug=args.debug)
 
     launcher.execute(command_line)

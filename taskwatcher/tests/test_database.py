@@ -49,6 +49,9 @@ class DatabaseTestCase(unittest.TestCase):
     def test050_update_task(self):
         update = {}
         update['name'] = "MyTestTask"
+        update['info1'] = "information1"
+        update['info2'] = "information2"
+        update['info3'] = "information3"
         update['pid'] = 120
         update['status'] = "RUNNING"
         update['starttime'] = int(time.time())
@@ -97,6 +100,9 @@ class DatabaseTestCase(unittest.TestCase):
         entry = {}
         entry['taskid'] = 100
         entry['taskname'] = 'MyTestTask'
+        entry['info1'] = 'Information1'
+        entry['info2'] = 'Information2'
+        entry['info3'] = 'Information3'
         entry['termsignal'] = 'SIGTERM'
         entry['termerror'] = ''
         entry['starttime'] = 1588874292

@@ -14,7 +14,7 @@ CLASSES
         Launch
     
     class Launch(builtins.object)
-     |  Launch(taskid='', db='', name='', feedpath=None, timeout=30, debug=False)
+     |  Launch(taskid='', db='', name='', info1='', info2='', info3='', feedpath=None, timeout=30, debug=False)
      |  
      |  Launcher from taskwatcher suite
      |  Called with taskid, db
@@ -23,7 +23,7 @@ CLASSES
      |  
      |  Methods defined here:
      |  
-     |  __init__(self, taskid='', db='', name='', feedpath=None, timeout=30, debug=False)
+     |  __init__(self, taskid='', db='', name='', info1='', info2='', info3='', feedpath=None, timeout=30, debug=False)
      |      Initialize self.  See help(type(self)) for accurate signature.
      |  
      |  child(self, command='')

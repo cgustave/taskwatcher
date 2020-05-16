@@ -68,7 +68,8 @@ class Database(object):
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
             cursor.execute('''
-                CREATE TABLE tasks (id INTEGER PRIMARY KEY, name TEXT, pid INTEGER, status TEXT, feedback INTEGER,
+                CREATE TABLE tasks (id INTEGER PRIMARY KEY, name TEXT, info1
+                           TEXT, info2 TEXT, info3 TEXT, pid INTEGER, status TEXT, feedback INTEGER,
                            reservetime INTEGER, starttime INTEGER, duration INTEGER, lastupdate INTEGER, timeout INTEGER)
             ''')
             cursor.execute('''
@@ -76,7 +77,7 @@ class Database(object):
             ''')
             cursor.execute('''
                 CREATE TABLE history (id INTEGER PRIMARY KEY, taskid INTEGER,
-                           taskname TEXT, termsignal TEXT, termerror TEXT,
+                           taskname TEXT, info1 TEXT, info2 TEXT, info3 TEXT, termsignal TEXT, termerror TEXT,
                            starttime INTEGER, endtime INTEGER, duration INTEGER,
                            feedback BLOB)
             ''')
@@ -291,10 +292,14 @@ class Database(object):
         try:
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
-            cursor.execute('''UPDATE tasks SET name=?, pid=?, status=?,
+            cursor.execute('''UPDATE tasks SET name=?, info1=?, info2=?,
+                           info3=?, pid=?, status=?,
                            feedback=?, reservetime=?, starttime=?, duration=?,
                            lastupdate=?, timeout=?  WHERE id=?''',
                            (task[taskid]['name'],
+                           task[taskid]['info1'],
+                           task[taskid]['info2'],
+                           task[taskid]['info3'],
                             task[taskid]['pid'],
                             task[taskid]['status'],
                             task[taskid]['feedback'],
@@ -327,26 +332,34 @@ class Database(object):
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
             if taskid:
-                cursor.execute('''SELECT id, name, pid, status, feedback, reservetime, 
+                cursor.execute('''SELECT id, name, info1, info2, info3, pid, status, feedback, reservetime, 
                                   starttime, duration, lastupdate, timeout FROM
                                   tasks WHERE id=?''', [taskid])
             else:
-                cursor.execute('''SELECT id, name, pid, status, feedback, reservetime, 
+                cursor.execute('''SELECT id, name, info1, info2, info3, pid, status, feedback, reservetime, 
                                   starttime, duration, lastupdate, timeout FROM tasks''')
  
             for row in cursor:
-                log.debug('''tasks {0} : name={1}, pid={2}, status={3}, feedback={4}, reservetime={5}, starttime={6}, duration={7}, lastupdate={8} timeout={9}'''
-                          .format(row[0], row[1], row[2], row[3],row[4], row[5], row[6], row[7], row[8], row[9]))
+                log.debug('''tasks {0} : name={1}, info1={2} info2={3}
+                          info3={4} pid={5}, status={6}, feedback={7},
+                          reservetime={8}, starttime={9}, duration={10},
+                          lastupdate={11} timeout={12}'''
+                          .format(row[0], row[1], row[2], row[3],row[4],
+                                  row[5], row[6], row[7], row[8], row[9],
+                                  row[10], row[11], row[12]))
                 result[row[0]]= {}
                 result[row[0]]['name'] = row[1]
-                result[row[0]]['pid'] = row[2]
-                result[row[0]]['status'] = row[3]
-                result[row[0]]['feedback'] = row[4]
-                result[row[0]]['reservetime'] = row[5]
-                result[row[0]]['starttime'] = row[6]
-                result[row[0]]['duration'] = row[7]
-                result[row[0]]['lastupdate'] = row[8]
-                result[row[0]]['timeout'] = row[9]
+                result[row[0]]['info1'] = row[2]
+                result[row[0]]['info2'] = row[3]
+                result[row[0]]['info3'] = row[4]
+                result[row[0]]['pid'] = row[5]
+                result[row[0]]['status'] = row[6]
+                result[row[0]]['feedback'] = row[7]
+                result[row[0]]['reservetime'] = row[8]
+                result[row[0]]['starttime'] = row[9]
+                result[row[0]]['duration'] = row[10]
+                result[row[0]]['lastupdate'] = row[11]
+                result[row[0]]['timeout'] = row[12]
 
         except Exception as e:
             self._DB.rollback()
@@ -529,10 +542,13 @@ class Database(object):
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
             cursor.execute('''INSERT INTO history
-                           (taskid,taskname,termsignal,termerror,starttime,endtime,duration,feedback)
-                           VALUES(?,?,?,?,?,?,?,?)''',
+                           (taskid,taskname,info1,info2,info3,termsignal,termerror,starttime,endtime,duration,feedback)
+                           VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
                            (    entry['taskid'], 
                                 entry['taskname'],
+                                entry['info1'],
+                                entry['info2'],
+                                entry['info3'],
                                 entry['termsignal'],
                                 entry['termerror'],
                                 entry['starttime'],
@@ -563,19 +579,22 @@ class Database(object):
         try:
             self._DB = sqlite3.connect(self.db)
             cursor = self._DB.cursor()
-            cursor.execute('''SELECT id, taskid, taskname, termsignal,
+            cursor.execute('''SELECT id, taskid, taskname, info1, info2, info3, termsignal,
                            termerror, starttime, endtime, duration, feedback
                            FROM history''')
             for row in cursor:
                 result[row[0]]= {}
                 result[row[0]]['taskid'] = row[1]
                 result[row[0]]['taskname'] = row[2]
-                result[row[0]]['termsignal'] = row[3]
-                result[row[0]]['termerror'] = row[4]
-                result[row[0]]['starttime'] = row[5]
-                result[row[0]]['endtime'] = row[6]
-                result[row[0]]['duration'] = row[7]
-                result[row[0]]['feedback'] = row[8]
+                result[row[0]]['info1'] = row[3]
+                result[row[0]]['info2'] = row[4]
+                result[row[0]]['info3'] = row[5]
+                result[row[0]]['termsignal'] = row[6]
+                result[row[0]]['termerror'] = row[7]
+                result[row[0]]['starttime'] = row[8]
+                result[row[0]]['endtime'] = row[9]
+                result[row[0]]['duration'] = row[10]
+                result[row[0]]['feedback'] = row[11]
 
         except Exception as e:
             self._DB.rollback()

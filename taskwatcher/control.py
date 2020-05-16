@@ -174,12 +174,15 @@ class Control(object):
         line = 1 ;
         for task in tasklist:
             if line == 1:
-                print("----------------------------------------------------------------------------------------------------------------------------------------")
-                print("| task id  |      task name       |   pid  |   status   | feedback | reserve time | starting time | duration | last update  | timeout  |")
-                print("----------------------------------------------------------------------------------------------------------------------------------------")
-            print("| {:>8} | {:20} | {:>6} | {:>10} | {:>8} | {:>12} | {:>13} | {:>8} | {:>12} | {:>8} |".
+                print("-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+                print("| task id  |      task name       |     info1    |     info2    |     info3    |   pid  |   status   | feedback | reserve time | starting time | duration | last update  | timeout  |")
+                print("-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+                print("| {:>8} | {:20} | {:12} | {:12} | {:12} | {:>6} | {:>10} | {:>8} | {:>12} | {:>13} | {:>8} | {:>12} | {:>8} |".
                   format(task, 
                          str(tasklist[task]['name']),
+                         str(tasklist[task]['info1']),
+                         str(tasklist[task]['info2']),
+                         str(tasklist[task]['info3']),
                          str(tasklist[task]['pid']),
                          str(tasklist[task]['status']),
                          str(tasklist[task]['feedback']),
@@ -191,7 +194,7 @@ class Control(object):
                         ))
             line = line+1
         if line > 1:
-            print("----------------------------------------------------------------------------------------------------------------------------------------")
+                print("-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
         if line==1:
             print("No tasks.")
@@ -214,15 +217,18 @@ class Control(object):
         log.info("Enter")
         historylist =  json.loads(self.get_history())
 
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
-        print("|    id    | task id  |      task name       | termsignal | termerror | starting time | ending time | duration |      feedback         |") 
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
+        print("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+        print("|    id    | task id  |      task name       |     info1    |     info2    |     info3    |termsignal | termerror | starting time | ending time | duration |      feedback         |") 
+        print("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
         for task in historylist:
-            print("| {:>8} | {:>8} | {:20} | {:>10} | {:>9} | {:>13} | {:>11} | {:>8} | {:>21} |".format(
+            print("| {:>8} | {:>8} | {:20} | {:12} | {:12} | {:12} |{:>10} | {:>9} | {:>13} | {:>11} | {:>8} | {:>21} |".format(
                 task,
                 str(historylist[task]['taskid']),
                 str(historylist[task]['taskname']),
+                str(historylist[task]['info1']),
+                str(historylist[task]['info2']),
+                str(historylist[task]['info3']),
                 str(historylist[task]['termsignal']),
                 str(historylist[task]['termerror']),
                 str(historylist[task]['starttime']),
@@ -231,7 +237,7 @@ class Control(object):
                 str(historylist[task]['feedback'])
             ))
 
-        print("----------------------------------------------------------------------------------------------------------------------------------------")
+        print("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
 
 if __name__ == '__main__': #pragma: no cover
@@ -249,6 +255,9 @@ if __name__ == '__main__': #pragma: no cover
     parser_task.add_argument('--reserve', help="reserve a taskid", action="store_true")
     parser_task.add_argument('--unique', help="taskname should be unique", action="store_true")
     parser_task.add_argument('--taskname', help="taskname")
+    parser_task.add_argument('--info1', help="any information")
+    parser_task.add_argument('--info2', help="any information")
+    parser_task.add_argument('--info3', help="any information")
     parser_task.add_argument('--feedback', metavar='taskid', help="returns feedback")
     parser_task.add_argument('--kill', metavar='taskid', help="kill task from its taskid")
     parser_task.add_argument('--killall', metavar='taskname', help="kill all tasks by name")

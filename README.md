@@ -67,9 +67,10 @@ Example :
 - Same call with taskwatcher :  
 	- Get a taskid : `control.py --reserve`  ==> Got 1
 	- Launch task using taskid 1 :  
-	`launch.py --taskid 1 --name 'Runner' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --db /fortipoc/taskwatch/sqlite.db --timeout 30 -- checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun --feedback feedback_1.log`
+	`launch.py --taskid 1 --name 'Runner' --info1 'Info1' --info2 'Info2' --info3 'Info3' --feedpath /fortipoc/playbooks/myPlaybook/run/1 --db /fortipoc/taskwatch/sqlite.db --timeout 30 -- checkitbaby.py --playbook myPlaybook --playlist myPlaylist --run 1 --dryrun --feedback feedback_1.log`
 
 	Notes : 
+    - info1, info2, info3 are optional, it can be usefull to store side information in the task manager
 	- the command to run is located after the --
 	- called program is informed with --feedback feedback_1.log that it should write a feedback file named feedback_1.log
 
@@ -164,6 +165,10 @@ Parameters :
 
 Optional parameters :  
 --name     <name>         : Name for the task. Use command name if not provided
+--info1 INFO1             : any information (optional)
+--info2 INFO2             : any information (optional)
+--info3 INFO3             : any information (optional)
+
 --feedpath <path>         : Feedback path where feedback.log is expected
 --timeout  <seconds>      : a value in second after which the command is considered timeout
 				            and should be kill (any update in feedback.log resets the timer)
@@ -193,7 +198,7 @@ List of available commands :
 --update             : Update database time informations (task duration)
 
 --list               : Provides a table displaying the list of the currently running tasks with : 
-                       [ taskid, name, pid, status, starttime, duration(s), feedback(yes/no), timer(s), timeout(s) ]
+                       [ taskid, name, info1, info2, info3, pid, status, starttime, duration(s), feedback(yes/no), timer(s), timeout(s) ]
 
 --reserve            : Returns a unique taskid, reserved for future call of the launcher
 
@@ -246,10 +251,10 @@ An sqlite database is used for 3 purposes :
 ```tex
 * Table tasks:
   Keeps track of running tasks status
-  ------------------------------------------------------------------------------------------------------------------------------------------
-  |       id(#1)        |  name |    pid   |   status   |   feedback    |  reservetime |   starttime   | duration |  lastupdate  | timeout |
-  | INTEGER PRIMARY KEY |  TEXT |  INTEGER |  TEXT(#2)  |  INTEGER(#3)  |  INTEGER(#4) |   INTEGER(#4) | INTEGER  |  INTEGER(#4) | INTEGER |
-  ------------------------------------------------------------------------------------------------------------------------------------------
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+  |       id(#1)        |  name | info1 | info2 | info3 |   pid   |   status   |   feedback    |  reservetime |   starttime   | duration |  lastupdate  | timeout |
+  | INTEGER PRIMARY KEY |  TEXT | TEXT  | TEXT  | TEXT  | INTEGER |  TEXT(#2)  |  INTEGER(#3)  |  INTEGER(#4) |   INTEGER(#4) | INTEGER  |  INTEGER(#4) | INTEGER |
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   Note : 
     #1 : should be automatic (use null during insert)
@@ -274,10 +279,10 @@ An sqlite database is used for 3 purposes :
 * Table history:
   Keeps track of the completed tasks
   Final state of json feedback is stored (this allows to store json reports before the command terminates)
-  -------------------------------------------------------------------------------------------------------------------------------
-  |       id(#0)        |  taskid(#1)  | taskname | termsignal | termerror |   starttime   |   endtime   | duration | feedback  | 
-  | INTEGER PRIMARY KEY |   INTEGER    |   TEXT   |  TEXT(#1)  |  TEXT(#2) |   INTEGER(#3) | INTEGER(#3) | INTEGER  |  BLOB(#4) |
-  -------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------------------------------------------------------------
+  |       id(#0)        |  taskid(#1)  | taskname |  info1 | info2 | info3 | termsignal | termerror |   starttime   |   endtime   | duration | feedback  | 
+  | INTEGER PRIMARY KEY |   INTEGER    |   TEXT   |  TEXT  | TEXT  | TEXT  |  TEXT(#1)  |  TEXT(#2) |   INTEGER(#3) | INTEGER(#3) | INTEGER  |  BLOB(#4) |
+  --------------------------------------------------------------------------------------------------------------------------------------------------------
 
   Notes :
   #1 : keeps track of the type of termination signal
