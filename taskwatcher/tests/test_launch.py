@@ -9,6 +9,7 @@ import unittest
 import json
 
 from launch import Launch
+from control import Control
 
 # create logger
 log.basicConfig(
@@ -22,15 +23,22 @@ log.debug("Start unittest")
 
 class LaunchTestCase(unittest.TestCase):
 
-    # Always run before any test
-    def setUp(self):
-        self.lnc = Launch(db='sqlite.db', debug=True)
-
-   
     def test10_execute_nofeedback(self):
-        command = "tests/testprog.py  --scenario sleeping --sleep 10 --debug"
-        self.lnc.execute(command=command)
-        
+        self.lnc = Launch(db='sqlite.db', debug=True)
+        command = "tests/testprog.py  --scenario sleeping --sleep 1 --debug"
+        result = self.lnc.execute(command=command)
+        print("test10 result={}".format(result))
+        self.assertTrue(result)
+
+    def test20_execute_feedback(self):
+        self.ctl = Control(db='sqlite.db')
+        self.ctl.initialize()
+        self.ctl.reserve()
+        self.lnc = Launch(db='sqlite.db', feedpath='/tmp', taskid=1, info1='INFO1', info2='INFO2', info3='INFO3', timeout=10, debug=True)
+        command = "tests/testprog.py --scenario progressing --feedback /tmp/feedback_1.log --delay 0.002 --debug"
+        result = self.lnc.execute(command=command)
+        print("test20 result={}".format(result))
+        self.assertTrue(result)
 
 if __name__ == '__main__':
     unittest.main()

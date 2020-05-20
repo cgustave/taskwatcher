@@ -133,8 +133,9 @@ class Launch(object):
             sys.exit(1)
 
         log.debug("Father : Forked child with pid={}".format(pid)) 
-        self.father_loop()
-
+        result = self.father_loop()
+        return result
+    
        
     def father_loop(self):
         """
@@ -158,6 +159,7 @@ class Launch(object):
         log.debug("Child exited: pid {} returned status {}".format(pid,status))
         if pid == self.forked_pid:
             self._remove_running_task(pid=pid,status=status)
+            return True
         else:
             sys.exit("should not see this")
 
@@ -308,6 +310,9 @@ class Launch(object):
             update['name'] = self.name
 
         update['status'] = 'RUNNING'
+        update['info1'] = self.info1
+        update['info2'] = self.info2
+        update['info3'] = self.info3
         update['pid'] = self.forked_pid
         update['feedback']= self.will_feedback
         self.starttime =  int(time.time())
@@ -365,7 +370,8 @@ class Launch(object):
         Returns the expected task update file name from taskid and feedpath
         """
         log.info("Enter")
-        update_file_name = "feedback_"+str(self.taskid)+".log"
+
+        update_file_name = str(self.feedpath)+"/feedback_"+str(self.taskid)+".log"
         return update_file_name
 
 
